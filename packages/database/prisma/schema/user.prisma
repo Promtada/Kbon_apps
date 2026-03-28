@@ -1,0 +1,39 @@
+enum Role {
+  USER
+  ADMIN
+}
+
+model User {
+  id       String  @id @default(cuid())
+  email    String  @unique
+  password String
+  name     String
+  phone    String?
+  role     Role    @default(USER)
+
+  // Relations (ความสัมพันธ์กับตารางอื่น)
+  sessions Session[]
+
+  // -- ความสัมพันธ์เหล่านี้จะ Error แดงๆ ไว้ก่อน จนกว่าเราจะสร้างไฟล์ product.prisma และ order.prisma ครับ
+  addresses Address[]
+  orders    Order[]
+  cart      Cart?
+  reviews   Review[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  userId       String
+  refreshToken String   @unique
+  expiresAt    DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([refreshToken])
+}

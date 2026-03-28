@@ -1,0 +1,64 @@
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  description String?
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Product {
+  id          String  @id @default(cuid())
+  name        String
+  description String  @db.Text
+  price       Float
+  stock       Int     @default(0)
+  sku         String? @unique
+  isPublished Boolean @default(false)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  images  ProductImage[]
+  reviews Review[] // เชื่อมกับตารางรีวิว
+
+  // เชื่อมกับตะกร้าและคำสั่งซื้อ
+  orderItems OrderItem[]
+  cartItems  CartItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  url       String
+  isPrimary Boolean @default(false)
+
+  @@index([productId])
+}
+
+// ระบบรีวิวสินค้า
+model Review {
+  id      String  @id @default(cuid())
+  rating  Int // เก็บค่าดาว 1-5
+  comment String? @db.Text
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([userId])
+}
