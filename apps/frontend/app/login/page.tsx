@@ -24,7 +24,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
       alert('เข้าสู่ระบบสำเร็จ! 🎉');
-      router.push('/'); 
+      router.push('/dashboard'); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
