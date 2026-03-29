@@ -11,27 +11,36 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(true); // เริ่มต้นเป็น true เพื่อเช็คสถานะการเข้าสู่ระบบ
-  const [isSubmitting, setIsSubmitting] = useState(false); // สำหรับตอนกดปุ่ม Login
+  const [isLoading, setIsLoading] = useState(true); 
+  const [isSubmitting, setIsSubmitting] = useState(false); 
   const router = useRouter();
 
-  // --- 🌟 ส่วนที่ทำให้ใช้งานได้จริง: เช็คสถานะเมื่อโหลดหน้าจอ ---
   useEffect(() => {
-    // 1. ตรวจสอบ Token ใน Cookie (ถ้ามีให้ไปหน้า Dashboard ทันที)
     const token = Cookies.get('access_token');
-    if (token) {
-      router.push('/dashboard');
-      return;
+    const savedUser = localStorage.getItem('user');
+
+    // 🌟 1. เช็คสิทธิ์และ Redirect อัตโนมัติเมื่อรีเฟรชหน้า
+    if (token && savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user.role === 'ADMIN') {
+          router.push('/admin/dashboard');
+        } else {
+          router.push('/dashboard');
+        }
+        return;
+      } catch (e) {
+        console.error("User data error");
+      }
     }
 
-    // 2. ตรวจสอบอีเมลที่เคยสั่งให้จำไว้
     const savedEmail = localStorage.getItem('kbon_remembered_email');
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
     
-    setIsLoading(false); // เช็คทุกอย่างเสร็จแล้วค่อยปิดหน้า Loading
+    setIsLoading(false);
   }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -47,7 +56,7 @@ export default function LoginPage() {
 
       const { accessToken, refreshToken, user } = response.data;
 
-      // จัดการระบบ Remember Me (LocalStorage จำแค่อีเมล)
+      // จัดการระบบ Remember Me
       if (rememberMe) {
         localStorage.setItem('kbon_remembered_email', email);
       } else {
@@ -58,21 +67,25 @@ export default function LoginPage() {
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
       
-      // ตั้งค่า Cookie (อายุตาม Remember Me)
       const expiryDays = rememberMe ? 30 : 7;
       const cookieOptions = { expires: expiryDays, secure: true, sameSite: 'strict' as const };
       
       Cookies.set('access_token', accessToken, cookieOptions);
       Cookies.set('refresh_token', refreshToken, cookieOptions);
 
-      router.push('/dashboard'); 
+      // 🌟 2. แยกทางไปตาม Role หลัง Login สำเร็จ
+      if (user.role === 'ADMIN') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
+      }
+
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
       setIsSubmitting(false);
     }
   };
 
-  // --- 🌟 หน้าจอ Loading ระหว่างเช็ค Token ---
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
@@ -100,7 +113,6 @@ export default function LoginPage() {
         <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-green-900/10 to-transparent"></div>
       </div>
 
-      {/* ปุ่ม Back to Home */}
       <Link 
         href="/" 
         className="absolute top-8 left-8 z-30 flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 px-5 py-2.5 rounded-2xl text-white text-sm font-bold shadow-xl hover:bg-white hover:text-[#22C55E] transition-all duration-500"
@@ -111,9 +123,7 @@ export default function LoginPage() {
         Back to Home
       </Link>
 
-      {/* --- ฝั่งขวา: Glassmorphism Box --- */}
       <div className="relative flex flex-1 flex-col justify-center items-end px-6 py-12 lg:pr-[8%] xl:pr-[12%] z-10">
-        
         <div className="w-full max-w-[440px] bg-white/80 backdrop-blur-3xl rounded-[3rem] p-10 md:p-14 shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white/60 animate-in fade-in slide-in-from-right-10 duration-1000">
           
           <div className="mb-10 text-left">
@@ -185,7 +195,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Social Auth */}
           <div className="mt-12">
             <div className="relative flex items-center justify-center mb-8">
               <div className="absolute w-full border-t border-slate-100"></div>
