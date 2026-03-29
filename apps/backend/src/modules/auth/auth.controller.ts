@@ -1,7 +1,9 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+// นำเข้าป้ายห้ามเข้า (Guard) จากโฟลเดอร์ guards ที่เราจัดระเบียบไว้
+import { JwtAuthGuard } from './guards/jwt-auth.guard'; 
 
 @Controller('auth')
 export class AuthController {
@@ -13,13 +15,21 @@ export class AuthController {
     return this.authService.register(createAuthDto);
   }
 
-  // --- 2. เข้าสู่ระบบ (เพิ่มใหม่สำหรับสเต็ปนี้) ---
+  // --- 2. เข้าสู่ระบบ ---
   @Post('login')
   async login(@Body() loginDto: any) {
     return this.authService.login(loginDto);
   }
 
-  // --- 3. ฟังก์ชันจัดการข้อมูล (CRUD เดิม) ---
+  // --- 🌟 3. ข้อมูลโปรไฟล์ (เพิ่มใหม่: ต้องมี Token ถึงจะดึงได้) ---
+  @Get('me')
+  @UseGuards(JwtAuthGuard) // แปะป้ายห้ามเข้า! ถ้าไม่มีกุญแจจะโดนเตะออก
+  getProfile(@Req() req) {
+    // ถ้ายามตรวจ Token ผ่าน ข้อมูล User จะถูกแนบมาใน req.user อัตโนมัติ
+    return req.user;
+  }
+
+  // --- 4. ฟังก์ชันจัดการข้อมูล (CRUD เดิม) ---
   @Get()
   findAll() {
     return this.authService.findAll();
