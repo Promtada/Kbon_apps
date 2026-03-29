@@ -1,8 +1,10 @@
 'use client'; // บรรทัดนี้ห้ามหาย! เป็นตัวบอกว่าเป็นหน้าบ้าน
 
-import React, { useState } from 'react'; // เพิ่ม React เข้ามาตรงๆ เพื่อแก้ปัญหา React.FormEvent
+import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
+// 🌟 1. เพิ่มการนำเข้า js-cookie เข้ามา
+import Cookies from 'js-cookie'; 
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -20,10 +22,15 @@ export default function LoginPage() {
         password,
       });
 
+      // เก็บลง LocalStorage เหมือนเดิม (เพื่อให้ Navbar ฝั่ง Client ใช้งาน)
       localStorage.setItem('access_token', response.data.access_token);
       localStorage.setItem('user', JSON.stringify(response.data.user));
 
-      alert('เข้าสู่ระบบสำเร็จ! 🎉');
+      // 🌟 2. หย่อน Token ลงใน Cookie เพื่อให้ Middleware (ด่านตรวจคนเข้าเมือง) มองเห็น
+      Cookies.set('access_token', response.data.access_token, { expires: 7 }); // หมดอายุใน 7 วัน
+
+      // ปิด alert ไว้เพื่อความสมูทในการเปลี่ยนหน้า
+      // alert('เข้าสู่ระบบสำเร็จ! 🎉'); 
       router.push('/dashboard'); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
@@ -52,7 +59,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
-          <button type="submit" className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700">
+          <button type="submit" className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700 transition-colors">
             Login
           </button>
         </form>

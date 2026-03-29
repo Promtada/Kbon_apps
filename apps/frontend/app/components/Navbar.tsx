@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
+import Cookies from 'js-cookie'; // 🌟 เพิ่ม import Cookies
 
 export default function Navbar() {
   const [user, setUser] = useState<any>(null);
@@ -21,6 +22,7 @@ export default function Navbar() {
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
+    Cookies.remove('access_token'); // 🌟 ลบ Cookie ตอนกด Logout
     setUser(null); // เคลียร์ข้อมูลใน Navbar
     router.push('/login');
   };
