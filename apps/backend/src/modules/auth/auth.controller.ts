@@ -19,16 +19,19 @@ export class AuthController {
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.authService.findOne(+id);
+    // เอา + ออก เพราะ ID ในฐานข้อมูลเราเป็น string (CUID)
+    return this.authService.findOne(id);
   }
 
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateAuthDto: UpdateAuthDto) {
-    return this.authService.update(+id, updateAuthDto);
+    // เอา + ออก เช่นกัน
+    return this.authService.update(id, updateAuthDto);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.authService.remove(+id);
+    // เอา + ออก เช่นกัน
+    return this.authService.remove(id);
   }
 }

@@ -1,5 +1,10 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
-import * as bcrypt from 'bcrypt';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
+import * as bcrypt from 'bcryptjs';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
@@ -8,6 +13,7 @@ import { UpdateAuthDto } from './dto/update-auth.dto';
 export class AuthService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // 1. สมัครสมาชิก (Register) - คุณทำผ่านแล้ว
   async register(createAuthDto: CreateAuthDto) {
     const { email, password, name } = createAuthDto;
 
@@ -43,19 +49,62 @@ export class AuthService {
     });
   }
 
-  findAll() {
-    return `This action returns all auth`;
+  // 2. เรียกดู User ทั้งหมด (Find All) - สำหรับเทสที่คุณต้องการ
+  async findAll() {
+    return this.prisma.user.findMany({
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        createdAt: true,
+      },
+      orderBy: {
+        createdAt: 'desc', // เรียงจากใหม่ไปเก่า
+      },
+    });
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} auth`;
+  // 3. เรียกดู User รายคนตาม ID
+  async findOne(id: string) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User with ID ${id} not found`);
+    }
+    return user;
   }
 
-  update(id: number, updateAuthDto: UpdateAuthDto) {
-    return `This action updates a #${id} auth`;
+  // 4. อัปเดตข้อมูล User
+  async update(id: string, updateAuthDto: UpdateAuthDto) {
+    // เช็คก่อนว่ามี user ไหม
+    await this.findOne(id);
+
+    return this.prisma.user.update({
+      where: { id },
+      data: updateAuthDto,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+      },
+    });
   }
 
-  remove(id: number) {
-    return `This action removes a #${id} auth`;
+  // 5. ลบ User
+  async remove(id: string) {
+    await this.findOne(id); // เช็คก่อนลบ
+    return this.prisma.user.delete({
+      where: { id },
+    });
   }
 }
