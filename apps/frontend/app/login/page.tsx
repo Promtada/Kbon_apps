@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
@@ -9,12 +9,35 @@ import Link from 'next/link';
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(true); // เริ่มต้นเป็น true เพื่อเช็คสถานะการเข้าสู่ระบบ
+  const [isSubmitting, setIsSubmitting] = useState(false); // สำหรับตอนกดปุ่ม Login
   const router = useRouter();
+
+  // --- 🌟 ส่วนที่ทำให้ใช้งานได้จริง: เช็คสถานะเมื่อโหลดหน้าจอ ---
+  useEffect(() => {
+    // 1. ตรวจสอบ Token ใน Cookie (ถ้ามีให้ไปหน้า Dashboard ทันที)
+    const token = Cookies.get('access_token');
+    if (token) {
+      router.push('/dashboard');
+      return;
+    }
+
+    // 2. ตรวจสอบอีเมลที่เคยสั่งให้จำไว้
+    const savedEmail = localStorage.getItem('kbon_remembered_email');
+    if (savedEmail) {
+      setEmail(savedEmail);
+      setRememberMe(true);
+    }
+    
+    setIsLoading(false); // เช็คทุกอย่างเสร็จแล้วค่อยปิดหน้า Loading
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setIsSubmitting(true);
 
     try {
       const response = await axios.post('http://localhost:4000/api/auth/login', {
@@ -23,15 +46,43 @@ export default function LoginPage() {
       });
 
       const { accessToken, refreshToken, user } = response.data;
+
+      // จัดการระบบ Remember Me (LocalStorage จำแค่อีเมล)
+      if (rememberMe) {
+        localStorage.setItem('kbon_remembered_email', email);
+      } else {
+        localStorage.removeItem('kbon_remembered_email');
+      }
+
+      // เก็บข้อมูลผู้ใช้
       localStorage.setItem('access_token', accessToken);
       localStorage.setItem('user', JSON.stringify(user));
-      Cookies.set('access_token', accessToken, { expires: 7 }); 
-      Cookies.set('refresh_token', refreshToken, { expires: 7 }); 
+      
+      // ตั้งค่า Cookie (อายุตาม Remember Me)
+      const expiryDays = rememberMe ? 30 : 7;
+      const cookieOptions = { expires: expiryDays, secure: true, sameSite: 'strict' as const };
+      
+      Cookies.set('access_token', accessToken, cookieOptions);
+      Cookies.set('refresh_token', refreshToken, cookieOptions);
+
       router.push('/dashboard'); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
+      setIsSubmitting(false);
     }
   };
+
+  // --- 🌟 หน้าจอ Loading ระหว่างเช็ค Token ---
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#F8FAFC]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#22C55E]"></div>
+          <p className="text-sm font-bold text-slate-400 animate-pulse">Checking access...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 font-sans overflow-hidden relative">
@@ -39,9 +90,7 @@ export default function LoginPage() {
       {/* --- ฝั่งซ้าย: รูปภาพพร้อมรอยตัดเฉียง --- */}
       <div 
         className="absolute inset-0 hidden lg:block w-[65%] z-0 overflow-hidden shadow-[25px_0_50px_rgba(0,0,0,0.1)]"
-        style={{ 
-          clipPath: 'polygon(0 0, 100% 0, 65% 100%, 0 100%)',
-        }}
+        style={{ clipPath: 'polygon(0 0, 100% 0, 65% 100%, 0 100%)' }}
       >
         <img
           className="absolute inset-0 h-full w-full object-cover scale-105 transition-transform duration-[30s] ease-linear hover:scale-115"
@@ -67,7 +116,7 @@ export default function LoginPage() {
         
         <div className="w-full max-w-[440px] bg-white/80 backdrop-blur-3xl rounded-[3rem] p-10 md:p-14 shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white/60 animate-in fade-in slide-in-from-right-10 duration-1000">
           
-          <div className="mb-12 text-left">
+          <div className="mb-10 text-left">
             <p className="text-lg font-semibold text-slate-400">Welcome back,</p>
             <h2 className="text-4xl font-black text-[#22C55E] mt-1 tracking-tighter">Kbon Platform</h2>
             <div className="w-16 h-2 bg-[#22C55E] mt-4 rounded-full shadow-[0_4px_12px_rgba(34,197,94,0.3)]"></div>
@@ -80,8 +129,9 @@ export default function LoginPage() {
                 type="email"
                 required
                 placeholder="you@email.com"
-                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none"
+                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none disabled:opacity-50"
                 value={email}
+                disabled={isSubmitting}
                 onChange={(e) => setEmail(e.target.value)}
               />
             </div>
@@ -89,8 +139,10 @@ export default function LoginPage() {
             <div>
               <div className="flex items-center justify-between mb-2 ml-1">
                 <label className="block text-xs font-black uppercase tracking-[0.2em] text-slate-400">Password</label>
-                {/* --- แก้ไขบรรทัดนี้จาก button เป็น Link --- */}
-                <Link href="/forgot-password" title="Forgot Password" className="text-xs font-bold text-[#22C55E] hover:text-[#16a34a] transition-colors">
+                <Link 
+                  href="/forgot-password" 
+                  className="text-xs font-bold text-[#22C55E] hover:text-[#16a34a] transition-colors"
+                >
                   Forgot?
                 </Link>
               </div>
@@ -98,23 +150,42 @@ export default function LoginPage() {
                 type="password"
                 required
                 placeholder="••••••••"
-                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none"
+                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none disabled:opacity-50"
                 value={password}
+                disabled={isSubmitting}
                 onChange={(e) => setPassword(e.target.value)}
               />
             </div>
 
-            {error && <p className="text-sm text-red-500 font-bold text-center bg-red-50 py-3 rounded-2xl border border-red-100">{error}</p>}
+            <div className="flex items-center ml-1">
+              <input
+                id="remember-me"
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-200 text-[#22C55E] focus:ring-[#22C55E]/20 cursor-pointer shadow-sm"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+              />
+              <label htmlFor="remember-me" className="ml-2.5 block text-xs font-bold text-slate-400 cursor-pointer hover:text-slate-600 transition-colors">
+                Remember my email
+              </label>
+            </div>
+
+            {error && (
+              <p className="text-xs text-red-500 font-bold text-center bg-red-50 py-3 rounded-2xl border border-red-100 animate-pulse">
+                {error}
+              </p>
+            )}
 
             <button
               type="submit"
-              className="w-full bg-[#22C55E] text-white font-black py-5 rounded-2xl shadow-[0_15px_30px_rgba(34,197,94,0.25)] hover:bg-[#1eb054] hover:shadow-none hover:translate-y-0.5 active:scale-[0.98] transition-all duration-300 uppercase tracking-widest text-sm"
+              disabled={isSubmitting}
+              className="w-full bg-[#22C55E] text-white font-black py-5 rounded-2xl shadow-[0_15px_30px_rgba(34,197,94,0.25)] hover:bg-[#1eb054] hover:shadow-none hover:translate-y-0.5 active:scale-[0.98] transition-all duration-300 uppercase tracking-widest text-sm disabled:bg-slate-300 disabled:shadow-none disabled:translate-y-0"
             >
-              Sign In
+              {isSubmitting ? 'Signing In...' : 'Sign In'}
             </button>
           </form>
 
-          {/* Social Login */}
+          {/* Social Auth */}
           <div className="mt-12">
             <div className="relative flex items-center justify-center mb-8">
               <div className="absolute w-full border-t border-slate-100"></div>
@@ -122,6 +193,7 @@ export default function LoginPage() {
             </div>
 
             <button
+              type="button"
               onClick={() => alert('Coming soon...')}
               className="flex w-full items-center justify-center gap-4 bg-white border-2 border-slate-50 rounded-2xl py-4 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-100 transition-all duration-300 shadow-sm"
             >
