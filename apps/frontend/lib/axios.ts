@@ -1,42 +1,60 @@
-// apps/frontend/lib/axios.ts
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
-// 1. สร้างตัวแทนของ axios (ตั้งชื่อว่า api)
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api', // ชี้ไปที่ Backend ของเราเลย จะได้ไม่ต้องพิมพ์ยาวๆ อีก
+  baseURL: 'http://localhost:4000/api',
   timeout: 10000,
 });
 
-// 2. ดักจับ Request ก่อนส่งออกไป (ด่านตรวจขาออก)
 api.interceptors.request.use(
   (config) => {
-    // ไปค้นดูกระเป๋า (LocalStorage) ว่ามีกุญแจไหม
-    // ข้อควรระวัง: LocalStorage จะทำงานได้เฉพาะฝั่ง Client (Browser)
     if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('access_token');
+      // ดึงจาก Cookies แทน LocalStorage เพื่อความสอดคล้องกับ Middleware
+      const token = Cookies.get('access_token');
       if (token) {
-        // ถ้ามีกุญแจ ให้แปะไปกับ Header อัตโนมัติ
         config.headers.Authorization = `Bearer ${token}`;
       }
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-// 3. (ตัวแถม) ดักจับ Response ขากลับ (ด่านตรวจขาเข้า)
 api.interceptors.response.use(
   (response) => response,
-  (error) => {
-    // ถ้า Backend ตอบกลับมาว่า 401 (กุญแจหมดอายุ / ไม่มีสิทธิ์)
-    if (error.response?.status === 401) {
-      if (typeof window !== 'undefined') {
-        // ลบกุญแจทิ้งแล้วเตะกลับไปหน้า Login
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('user');
-        window.location.href = '/login'; 
+  async (error) => {
+    const originalRequest = error.config;
+
+    // 🌟 ถ้าเจอ 401 (Unauthorized) และยังไม่ได้ลองขอใหม่
+    if (error.response?.status === 401 && !originalRequest._retry) {
+      originalRequest._retry = true;
+
+      try {
+        const refreshToken = Cookies.get('refresh_token');
+        if (!refreshToken) throw new Error('No refresh token');
+
+        // ยิงไปขอ Token ชุดใหม่
+        const res = await axios.post('http://localhost:4000/api/auth/refresh', {
+          refreshToken,
+        });
+
+        const { accessToken, refreshToken: newRefreshToken } = res.data;
+
+        // อัปเดต Cookies ใหม่
+        Cookies.set('access_token', accessToken, { expires: 7 });
+        Cookies.set('refresh_token', newRefreshToken, { expires: 7 });
+
+        // ยิง Request เดิมซ้ำอีกครั้งด้วย Token ใหม่
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        // ถ้า Refresh ไม่ผ่าน (กุญแจสำรองตายด้วย) ให้เตะออก
+        if (typeof window !== 'undefined') {
+          Cookies.remove('access_token');
+          Cookies.remove('refresh_token');
+          localStorage.removeItem('user');
+          window.location.href = '/login';
+        }
       }
     }
     return Promise.reject(error);

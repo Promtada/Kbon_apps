@@ -6,43 +6,53 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import * as bcrypt from 'bcryptjs';
-import { JwtService } from '@nestjs/jwt'; // เพิ่มตัวนี้
+import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 
 @Injectable()
 export class AuthService {
-  // เพิ่ม jwtService เข้ามาใน constructor
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwtService: JwtService,
   ) {}
 
-  // --- 1. ฟังก์ชัน Login (หัวใจของสเต็ปนี้) ---
+  // --- 🌟 ฟังก์ชันช่วยสร้าง Tokens คู่ (Access & Refresh) ---
+  private async generateTokens(userId: string, email: string, role: string) {
+    const payload = { sub: userId, email, role };
+    
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, { expiresIn: '15m' }), // ใบหลัก 15 นาที
+      this.jwtService.signAsync(payload, { expiresIn: '7d' }),  // ใบสำรอง 7 วัน
+    ]);
+
+    return { accessToken, refreshToken };
+  }
+
+  // --- 1. ฟังก์ชัน Login (อัปเกรดให้สร้าง Session) ---
   async login(loginDto: any) {
     const { email, password } = loginDto;
 
-    // หา User ในฐานข้อมูล
-    const user = await this.prisma.user.findUnique({
-      where: { email },
-    });
+    const user = await this.prisma.user.findUnique({ where: { email } });
 
-    // เช็คว่ามี User ไหม และรหัสผ่านที่ส่งมา ตรงกับที่ Hash ไว้ใน DB ไหม
     if (!user || !(await bcrypt.compare(password, user.password))) {
       throw new UnauthorizedException('อีเมลหรือรหัสผ่านไม่ถูกต้อง');
     }
 
-    // สร้างข้อมูลที่จะใส่ในตั๋ว (Payload)
-    const payload = { 
-      sub: user.id, 
-      email: user.email, 
-      role: user.role 
-    };
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
 
-    // ส่ง Token และข้อมูล User เบื้องต้นกลับไป
+    // บันทึกลงตาราง Session (Refresh Token Rotation)
+    await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        refreshToken: tokens.refreshToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 วัน
+      },
+    });
+
     return {
-      access_token: await this.jwtService.signAsync(payload),
+      ...tokens,
       user: {
         id: user.id,
         email: user.email,
@@ -52,7 +62,41 @@ export class AuthService {
     };
   }
 
-  // --- 2. ฟังก์ชันเดิม (ห้ามลบ) ---
+  // --- 🌟 ฟังก์ชันใหม่: ใช้กุญแจสำรองมาแลกกุญแจใหม่ (Refresh) ---
+  async refresh(refreshToken: string) {
+    try {
+      // 1. ตรวจสอบความถูกต้องของ Token (Verify JWT)
+      const payload = await this.jwtService.verifyAsync(refreshToken);
+      
+      // 2. เช็คในตาราง Session ว่ามีกุญแจนี้จริงและยังไม่หมดอายุ
+      const session = await this.prisma.session.findUnique({
+        where: { refreshToken },
+      });
+
+      if (!session || session.expiresAt < new Date()) {
+        if (session) await this.prisma.session.delete({ where: { id: session.id } });
+        throw new UnauthorizedException('Session expired');
+      }
+
+      // 3. สร้างกุญแจชุดใหม่
+      const newTokens = await this.generateTokens(payload.sub, payload.email, payload.role);
+
+      // 4. อัปเดต Session เดิมด้วยกุญแจใหม่ (Rotate)
+      await this.prisma.session.update({
+        where: { id: session.id },
+        data: {
+          refreshToken: newTokens.refreshToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        },
+      });
+
+      return newTokens;
+    } catch (e) {
+      throw new UnauthorizedException('Invalid refresh token');
+    }
+  }
+
+  // --- 2. ฟังก์ชันเดิม (คงไว้ทั้งหมด) ---
   async register(createAuthDto: CreateAuthDto) {
     const { email, password, name } = createAuthDto;
     if (!email?.trim() || !password?.trim()) {

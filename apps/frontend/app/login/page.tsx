@@ -1,10 +1,10 @@
-'use client'; // บรรทัดนี้ห้ามหาย! เป็นตัวบอกว่าเป็นหน้าบ้าน
+'use client';
 
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-// 🌟 1. เพิ่มการนำเข้า js-cookie เข้ามา
-import Cookies from 'js-cookie'; 
+import Cookies from 'js-cookie';
+import Link from 'next/link';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -22,15 +22,11 @@ export default function LoginPage() {
         password,
       });
 
-      // เก็บลง LocalStorage เหมือนเดิม (เพื่อให้ Navbar ฝั่ง Client ใช้งาน)
-      localStorage.setItem('access_token', response.data.access_token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
-
-      // 🌟 2. หย่อน Token ลงใน Cookie เพื่อให้ Middleware (ด่านตรวจคนเข้าเมือง) มองเห็น
-      Cookies.set('access_token', response.data.access_token, { expires: 7 }); // หมดอายุใน 7 วัน
-
-      // ปิด alert ไว้เพื่อความสมูทในการเปลี่ยนหน้า
-      // alert('เข้าสู่ระบบสำเร็จ! 🎉'); 
+      const { accessToken, refreshToken, user } = response.data;
+      localStorage.setItem('access_token', accessToken);
+      localStorage.setItem('user', JSON.stringify(user));
+      Cookies.set('access_token', accessToken, { expires: 7 }); 
+      Cookies.set('refresh_token', refreshToken, { expires: 7 }); 
       router.push('/dashboard'); 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
@@ -38,31 +34,111 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50">
-      <div className="w-full max-w-md space-y-8 rounded-xl bg-white p-10 shadow-xl">
-        <h2 className="text-center text-3xl font-extrabold text-gray-900">Kbon Platform</h2>
-        {error && <div className="text-red-500 text-sm text-center bg-red-50 p-2 rounded">{error}</div>}
-        <form className="mt-8 space-y-6" onSubmit={handleLogin}>
-          <input
-            type="email"
-            placeholder="Email"
-            required
-            className="w-full rounded-lg border p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            required
-            className="w-full rounded-lg border p-3 outline-none focus:ring-2 focus:ring-blue-500 text-black"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-          <button type="submit" className="w-full rounded-lg bg-blue-600 p-3 font-semibold text-white hover:bg-blue-700 transition-colors">
-            Login
-          </button>
-        </form>
+    <div className="flex min-h-screen bg-[#F8FAFC] text-slate-900 font-sans overflow-hidden relative">
+      
+      {/* --- ฝั่งซ้าย: รูปภาพพร้อมรอยตัดเฉียง --- */}
+      <div 
+        className="absolute inset-0 hidden lg:block w-[65%] z-0 overflow-hidden shadow-[25px_0_50px_rgba(0,0,0,0.1)]"
+        style={{ 
+          clipPath: 'polygon(0 0, 100% 0, 65% 100%, 0 100%)',
+        }}
+      >
+        <img
+          className="absolute inset-0 h-full w-full object-cover scale-105 transition-transform duration-[30s] ease-linear hover:scale-115"
+          src="https://images.unsplash.com/photo-1558449028-b53a39d100fc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80"
+          alt="Smart Hydroponics Farm"
+        />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/40 via-green-900/10 to-transparent"></div>
+      </div>
+
+      {/* ปุ่ม Back to Home */}
+      <Link 
+        href="/" 
+        className="absolute top-8 left-8 z-30 flex items-center gap-2 bg-white/20 backdrop-blur-md border border-white/30 px-5 py-2.5 rounded-2xl text-white text-sm font-bold shadow-xl hover:bg-white hover:text-[#22C55E] transition-all duration-500"
+      >
+        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+        </svg>
+        Back to Home
+      </Link>
+
+      {/* --- ฝั่งขวา: Glassmorphism Box --- */}
+      <div className="relative flex flex-1 flex-col justify-center items-end px-6 py-12 lg:pr-[8%] xl:pr-[12%] z-10">
+        
+        <div className="w-full max-w-[440px] bg-white/80 backdrop-blur-3xl rounded-[3rem] p-10 md:p-14 shadow-[0_30px_60px_rgba(0,0,0,0.12)] border border-white/60 animate-in fade-in slide-in-from-right-10 duration-1000">
+          
+          <div className="mb-12 text-left">
+            <p className="text-lg font-semibold text-slate-400">Welcome back,</p>
+            <h2 className="text-4xl font-black text-[#22C55E] mt-1 tracking-tighter">Kbon Platform</h2>
+            <div className="w-16 h-2 bg-[#22C55E] mt-4 rounded-full shadow-[0_4px_12px_rgba(34,197,94,0.3)]"></div>
+          </div>
+
+          <form onSubmit={handleLogin} className="space-y-6">
+            <div>
+              <label className="block text-xs font-black uppercase tracking-[0.2em] text-slate-400 mb-2 ml-1">Email address</label>
+              <input
+                type="email"
+                required
+                placeholder="you@email.com"
+                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-2 ml-1">
+                <label className="block text-xs font-black uppercase tracking-[0.2em] text-slate-400">Password</label>
+                {/* --- แก้ไขบรรทัดนี้จาก button เป็น Link --- */}
+                <Link href="/forgot-password" title="Forgot Password" className="text-xs font-bold text-[#22C55E] hover:text-[#16a34a] transition-colors">
+                  Forgot?
+                </Link>
+              </div>
+              <input
+                type="password"
+                required
+                placeholder="••••••••"
+                className="block w-full bg-white border-2 border-slate-50 rounded-2xl py-4 px-6 text-slate-900 font-medium placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 transition-all outline-none"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            {error && <p className="text-sm text-red-500 font-bold text-center bg-red-50 py-3 rounded-2xl border border-red-100">{error}</p>}
+
+            <button
+              type="submit"
+              className="w-full bg-[#22C55E] text-white font-black py-5 rounded-2xl shadow-[0_15px_30px_rgba(34,197,94,0.25)] hover:bg-[#1eb054] hover:shadow-none hover:translate-y-0.5 active:scale-[0.98] transition-all duration-300 uppercase tracking-widest text-sm"
+            >
+              Sign In
+            </button>
+          </form>
+
+          {/* Social Login */}
+          <div className="mt-12">
+            <div className="relative flex items-center justify-center mb-8">
+              <div className="absolute w-full border-t border-slate-100"></div>
+              <span className="relative bg-white/0 px-4 text-[10px] font-black uppercase tracking-[0.3em] text-slate-300">Social Auth</span>
+            </div>
+
+            <button
+              onClick={() => alert('Coming soon...')}
+              className="flex w-full items-center justify-center gap-4 bg-white border-2 border-slate-50 rounded-2xl py-4 text-sm font-bold text-slate-700 hover:bg-slate-50 hover:border-slate-100 transition-all duration-300 shadow-sm"
+            >
+              <svg className="h-5 w-5" viewBox="0 0 48 48">
+                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
+                <path fill="#4285F4" d="M46.64 24.55c0-1.63-.15-3.2-.41-4.72H24v9.02h12.74c-.55 2.87-2.17 5.31-4.61 6.94l7.21 5.59c4.21-3.88 6.64-9.6 6.64-16.14z"/>
+                <path fill="#FBBC05" d="M10.54 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.98-6.19z"/>
+                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.21-5.59c-2.21 1.48-5.03 2.37-8.68 2.37-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
+              </svg>
+              Sign in with Google
+            </button>
+
+            <p className="mt-12 text-center text-sm font-bold text-slate-300">
+              หิ้วกระถางมาใหม่? <Link href="/register" className="text-[#22C55E] hover:text-[#16a34a] underline decoration-2 underline-offset-8 transition-all">สร้างบัญชีที่นี่</Link>
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   );

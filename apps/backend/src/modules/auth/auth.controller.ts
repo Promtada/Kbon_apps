@@ -2,34 +2,34 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
-// นำเข้าป้ายห้ามเข้า (Guard) จากโฟลเดอร์ guards ที่เราจัดระเบียบไว้
 import { JwtAuthGuard } from './guards/jwt-auth.guard'; 
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  // --- 1. สมัครสมาชิก ---
   @Post('register')
   async register(@Body() createAuthDto: CreateAuthDto) {
     return this.authService.register(createAuthDto);
   }
 
-  // --- 2. เข้าสู่ระบบ ---
   @Post('login')
   async login(@Body() loginDto: any) {
     return this.authService.login(loginDto);
   }
 
-  // --- 🌟 3. ข้อมูลโปรไฟล์ (เพิ่มใหม่: ต้องมี Token ถึงจะดึงได้) ---
+  // --- 🌟 ใหม่: ใช้แลกกุญแจใหม่ ---
+  @Post('refresh')
+  async refresh(@Body('refreshToken') refreshToken: string) {
+    return this.authService.refresh(refreshToken);
+  }
+
   @Get('me')
-  @UseGuards(JwtAuthGuard) // แปะป้ายห้ามเข้า! ถ้าไม่มีกุญแจจะโดนเตะออก
+  @UseGuards(JwtAuthGuard)
   getProfile(@Req() req) {
-    // ถ้ายามตรวจ Token ผ่าน ข้อมูล User จะถูกแนบมาใน req.user อัตโนมัติ
     return req.user;
   }
 
-  // --- 4. ฟังก์ชันจัดการข้อมูล (CRUD เดิม) ---
   @Get()
   findAll() {
     return this.authService.findAll();
