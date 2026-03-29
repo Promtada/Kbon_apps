@@ -1,8 +1,8 @@
 'use client';
 import { useEffect, useState } from 'react';
 // 🌟 Step 1: Import Navbar เข้ามาใช้งาน
-import Navbar from '../components/Navbar'; 
-import api from '../../lib/axios'; // นำเข้าพนักงานไปรษณีย์ของเรา (ปรับ Path ตามโครงสร้างจริง)
+import Navbar from '../../components/Navbar';
+import api from '../../../lib/axios'; // นำเข้าพนักงานไปรษณีย์ของเรา (ปรับ Path ตามโครงสร้างจริง)
 // useRouter และ Cookies ไม่ต้องใช้ในหน้านี้แล้ว เพราะ Navbar จัดการเรื่อง Logout ให้ครับ
 
 export default function DashboardPage() {
