@@ -1,40 +1,43 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import api from '../../lib/axios'; // นำเข้าพนักงานไปรษณีย์ของเรา
 
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    // 1. ลองหากุญแจ (Token) และข้อมูล User จากในเครื่อง
-    const token = localStorage.getItem('access_token');
-    const savedUser = localStorage.getItem('user');
+    const fetchProfile = async () => {
+      try {
+        // ยิงไปที่ /auth/me 
+        // สังเกตว่าเราไม่ต้องพิมพ์ localhost:4000 และไม่ต้องแนบ Token เองแล้ว!
+        const response = await api.get('/auth/me');
+        setUser(response.data); // เอาข้อมูลของจริงจาก Backend มาโชว์
+      } catch (error) {
+        console.error('Failed to fetch profile:', error);
+        // ไม่ต้องเขียน router.push เพราะ Interceptor เราจัดการเตะกลับให้แล้ว
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    // 2. ถ้าไม่มีกุญแจ แปลว่าแอบเข้า หรือยังไม่ได้ล็อคอิน -> ดีดกลับไปหน้า Login
-    if (!token || !savedUser) {
-      router.push('/login');
-    } else {
-      // 3. ถ้ามีครบ ให้เอาข้อมูลมาแสดง
-      setUser(JSON.parse(savedUser));
-    }
-  }, [router]);
+    fetchProfile();
+  }, []);
 
-  // ฟังก์ชันสำหรับกดปุ่ม Logout
   const handleLogout = () => {
     localStorage.removeItem('access_token');
     localStorage.removeItem('user');
-    router.push('/login'); // ลบกุญแจทิ้งแล้วกลับไปหน้า Login
+    router.push('/login');
   };
 
-  // ระหว่างรอโหลดข้อมูล ให้โชว์หน้าขาวๆ ไปก่อน จะได้ไม่กระตุก
-  if (!user) return <div className="min-h-screen bg-gray-50"></div>;
+  if (loading) return <div className="min-h-screen bg-gray-50 flex justify-center items-center text-black">กำลังตรวจสอบข้อมูล...</div>;
+  if (!user) return null; // ป้องกันการกระตุกก่อนโดนเตะไปหน้า Login
 
   return (
     <div className="min-h-screen bg-gray-50 text-black p-8 font-sans">
       <div className="max-w-4xl mx-auto">
-        
-        {/* --- Header ของ Dashboard --- */}
         <header className="flex justify-between items-center bg-white p-6 rounded-xl shadow-sm mb-8 border border-gray-100">
           <div>
             <h1 className="text-2xl font-bold text-green-600">Kbon Dashboard</h1>
@@ -48,8 +51,8 @@ export default function DashboardPage() {
           </button>
         </header>
 
-        {/* --- ส่วนแสดงข้อมูล User --- */}
         <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          {/* ข้อมูลทั้งหมดนี้มาจากฐานข้อมูลจริงๆ แล้ว! */}
           <h2 className="text-xl font-bold mb-6 border-b pb-4">Welcome back, {user.name}! 👋</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -63,13 +66,7 @@ export default function DashboardPage() {
               <p className="font-semibold text-lg">{user.role}</p>
             </div>
           </div>
-
-          <div className="mt-8 p-6 bg-gray-50 rounded-lg border border-gray-200 text-center text-gray-500">
-            {/* พื้นที่สำหรับใส่กราฟหรือสถานะเครื่องปลูกในอนาคต */}
-            <p>🔧 อุปกรณ์และสถิติการปลูกของคุณจะแสดงที่นี่ในอนาคต</p>
-          </div>
         </div>
-
       </div>
     </div>
   );
