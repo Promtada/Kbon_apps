@@ -460,11 +460,36 @@ const mockProducts = [
   }
 ];
 
+const mockUsers = [
+  { name: 'สมชาย ใจดี', email: 'somchai@example.com', phone: '0812345678' },
+  { name: 'สมหญิง รักดี', email: 'somying@example.com', phone: '0898765432' },
+  { name: 'มานะ อดทน', email: 'mana@example.com', phone: '0861112222' },
+  { name: 'ปิติ ปรีดา', email: 'piti@example.com', phone: '0833334444' },
+  { name: 'ชูใจ ยิ้มแย้ม', email: 'choojai@example.com', phone: '0855556666' },
+  { name: 'วีระ กล้าหาญ', email: 'weera@example.com', phone: '0819998888' },
+  { name: 'แพรไหม ทองดี', email: 'paemai@example.com', phone: '0821234567' },
+  { name: 'ธนา พารวย', email: 'thana@example.com', phone: '0877778888' },
+];
+
+const mockProvinces = ['กรุงเทพมหานคร', 'เชียงใหม่', 'ชลบุรี', 'ขอนแก่น', 'ภูเก็ต'];
+const mockAddresses = [
+  '123/45 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย',
+  '99/9 ถนนนิมมานเหมินทร์ ตำบลสุเทพ อำเภอเมือง',
+  '44/12 ถนนพัทยาทีใต้ ตำบลหนองปรือ อำเภอบางละมุง',
+  '55/2 ถนนศรีจันทร์ ตำบลในเมือง อำเภอเมือง',
+  '88/8 ถนนถลาง ตำบลตลาดใหญ่ อำเภอเมือง',
+];
+
 async function main() {
-  console.log('🌱 Cleansing database... removing legacy products.');
+  console.log('🌱 Cleansing database... removing legacy data.');
+  await prisma.orderItem.deleteMany();
+  await prisma.order.deleteMany();
+  await prisma.address.deleteMany();
+  await prisma.user.deleteMany();
   await prisma.product.deleteMany();
 
   console.log('✨ Seeding 20 premium mock hydroponics products...');
+  const createdProducts = [];
   for (const productData of mockProducts) {
     const p = await prisma.product.create({
       data: {
@@ -473,7 +498,81 @@ async function main() {
         techSpecs: productData.techSpecs,
       }
     });
+    createdProducts.push(p);
     console.log(` • Inserted: ${p.name}`);
+  }
+
+  console.log('✨ Seeding mock users, addresses, and orders...');
+  for (const [index, userData] of mockUsers.entries()) {
+    // Hash password mock
+    const user = await prisma.user.create({
+      data: {
+        ...userData,
+        password: 'hashed_password_mock', // Usually you'd hash this
+        role: 'USER',
+      }
+    });
+
+    // Create 1-2 addresses for user
+    const addressCount = (index % 2) + 1;
+    const userAddresses = [];
+    for (let i = 0; i < addressCount; i++) {
+      const address = await prisma.address.create({
+        data: {
+          userId: user.id,
+          fullName: user.name,
+          phone: user.phone || '0000000000',
+          addressLine: mockAddresses[(index + i) % mockAddresses.length],
+          province: mockProvinces[(index + i) % mockProvinces.length],
+          postalCode: `10${index}${i}0`,
+          isDefault: i === 0,
+        }
+      });
+      userAddresses.push(address);
+    }
+
+    // Create 1-3 orders for user
+    const orderCount = (index % 3) + 1;
+    for (let i = 0; i < orderCount; i++) {
+      const orderAddress = userAddresses[i % userAddresses.length];
+      
+      // Select 1-3 random products for the order
+      const itemQtyCount = (i % 3) + 1;
+      const orderItemsData = [];
+      let totalAmount = 0;
+      
+      for (let j = 0; j < itemQtyCount; j++) {
+        const product = createdProducts[(index + i + j) % createdProducts.length];
+        const qty = (j % 2) + 1;
+        totalAmount += product.price * qty;
+        orderItemsData.push({
+          productId: product.id,
+          quantity: qty,
+          priceAtPurchase: product.price,
+        });
+      }
+
+      await prisma.order.create({
+        data: {
+          userId: user.id,
+          totalAmount,
+          status: i === 0 ? 'PENDING' : (i === 1 ? 'SHIPPED' : 'DELIVERED'),
+          addressId: orderAddress.id,
+          shippingAddressSnapshot: JSON.stringify({
+            fullName: orderAddress.fullName,
+            phone: orderAddress.phone,
+            addressLine: orderAddress.addressLine,
+            province: orderAddress.province,
+            postalCode: orderAddress.postalCode,
+          }),
+          trackingNumber: i > 0 ? `TH${Date.now()}88${i}` : null,
+          paymentMethod: i % 2 === 0 ? 'Credit Card' : 'Bank Transfer',
+          items: {
+            create: orderItemsData,
+          }
+        }
+      });
+    }
   }
 
   console.log('✅ Seeding completed beautifully with rich metadata!');

@@ -51,8 +51,12 @@ model Order {
   totalAmount Float
   status      OrderStatus @default(PENDING)
 
-  addressId       String
-  shippingAddress Address @relation(fields: [addressId], references: [id])
+  addressId               String
+  shippingAddress         Address @relation(fields: [addressId], references: [id])
+  shippingAddressSnapshot String  @db.Text // JSON snapshot of address at order time
+
+  trackingNumber String?
+  paymentMethod  String?
 
   items OrderItem[]
 
