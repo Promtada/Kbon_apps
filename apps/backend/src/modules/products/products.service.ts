@@ -20,6 +20,8 @@ export class ProductsService {
         warranty: dto.warranty ?? '1 ปี',
         features: dto.features ?? [],
         isPublished: dto.isPublished ?? false,
+        includedItems: dto.includedItems ?? null,
+        techSpecs: dto.techSpecs ?? null,
       },
     });
   }
@@ -31,7 +33,10 @@ export class ProductsService {
   }
 
   async findOne(id: string) {
-    const product = await this.prisma.product.findUnique({ where: { id } });
+    const product = await this.prisma.product.findUnique({
+      where: { id },
+      include: { reviews: true },
+    });
     if (!product) {
       throw new NotFoundException(`Product with id "${id}" not found`);
     }

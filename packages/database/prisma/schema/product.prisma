@@ -21,6 +21,9 @@ model Product {
   features      String[]
   isPublished   Boolean  @default(false)
 
+  includedItems Json?
+  techSpecs     Json?
+
   images  ProductImage[]
   reviews Review[] // เชื่อมกับตารางรีวิว
 
@@ -51,8 +54,9 @@ model Review {
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
-  userId String
-  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId       String?
+  user         User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reviewerName String? // สำหรับ guest review หรือชื่อที่บันทึกไว้
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

@@ -12,6 +12,17 @@ const API_BASE = 'http://localhost:4000/api';
 
 // ---- Types ----------------------------------------------------------------
 
+interface IncludedItem {
+  title: string;
+  subtitle: string;
+  imageUrl: string;
+}
+
+interface TechSpec {
+  title: string;
+  description: string;
+}
+
 interface FormData {
   name: string;
   category: string;
@@ -45,6 +56,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
   });
 
   const [features, setFeatures] = useState<string[]>(['']);
+  const [includedItems, setIncludedItems] = useState<IncludedItem[]>([{ title: '', subtitle: '', imageUrl: '' }]);
+  const [techSpecs, setTechSpecs] = useState<TechSpec[]>([{ title: '', description: '' }]);
 
   // ---------- Fetch existing product ----------
   useEffect(() => {
@@ -68,6 +81,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
         });
 
         setFeatures(data.features?.length > 0 ? data.features : ['']);
+        setIncludedItems(data.includedItems?.length > 0 ? data.includedItems : [{ title: '', subtitle: '', imageUrl: '' }]);
+        setTechSpecs(data.techSpecs?.length > 0 ? data.techSpecs : [{ title: '', description: '' }]);
       } catch (err) {
         console.error('Failed to fetch product:', err);
         setFetchError('ไม่สามารถโหลดข้อมูลสินค้าได้');
@@ -95,6 +110,26 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
     if (features.length > 1) setFeatures(features.filter((_, i) => i !== index));
   };
 
+  const handleIncludedItemChange = (index: number, field: keyof IncludedItem, value: string) => {
+    const next = [...includedItems];
+    next[index][field] = value;
+    setIncludedItems(next);
+  };
+  const addIncludedItem = () => setIncludedItems([...includedItems, { title: '', subtitle: '', imageUrl: '' }]);
+  const removeIncludedItem = (index: number) => {
+    setIncludedItems(includedItems.filter((_, i) => i !== index));
+  };
+
+  const handleTechSpecChange = (index: number, field: keyof TechSpec, value: string) => {
+    const next = [...techSpecs];
+    next[index][field] = value;
+    setTechSpecs(next);
+  };
+  const addTechSpec = () => setTechSpecs([...techSpecs, { title: '', description: '' }]);
+  const removeTechSpec = (index: number) => {
+    setTechSpecs(techSpecs.filter((_, i) => i !== index));
+  };
+
   // ---------- Submit — PATCH ----------
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,6 +145,8 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
       warranty: formData.warranty,
       isPublished: formData.isPublished,
       features: features.filter((f) => f.trim() !== ''),
+      includedItems: includedItems.filter((item) => item.title.trim() !== ''),
+      techSpecs: techSpecs.filter((spec) => spec.title.trim() !== ''),
     };
 
     try {
@@ -281,14 +318,109 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
 
+          {/* Section 3: สิ่งที่รวมอยู่ในกล่อง */}
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-black text-slate-800 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-emerald-50 text-[#22C55E] flex items-center justify-center text-sm">3</span>
+                อุปกรณ์ในกล่อง (What's in the box?)
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {includedItems.map((item, index) => (
+                <div key={index} className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl relative">
+                  <button
+                    type="button"
+                    onClick={() => removeIncludedItem(index)}
+                    className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors bg-white p-2 rounded-xl shadow-sm"
+                    title="ลบ"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <div className="pr-12">
+                    <input
+                      type="text"
+                      placeholder="ชื่ออุปกรณ์ (เช่น pH Balancer)"
+                      value={item.title}
+                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-2"
+                      onChange={(e) => handleIncludedItemChange(index, 'title', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="คำอธิบายสั้นๆ (เช่น Balance pH Up and Down)"
+                      value={item.subtitle}
+                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-2"
+                      onChange={(e) => handleIncludedItemChange(index, 'subtitle', e.target.value)}
+                    />
+                    <input
+                      type="text"
+                      placeholder="URL รูปภาพ (เช่น https://...)"
+                      value={item.imageUrl}
+                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm font-mono text-slate-500 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                      onChange={(e) => handleIncludedItemChange(index, 'imageUrl', e.target.value)}
+                    />
+                  </div>
+                </div>
+              ))}
+              <button type="button" onClick={addIncludedItem} className="w-full py-4 rounded-2xl border-2 border-dashed border-[#22C55E]/30 text-[#22C55E] font-bold text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
+                <Plus size={16} /> เพิ่มอุปกรณ์
+              </button>
+            </div>
+          </div>
+
+          {/* Section 4: สเปคเทคนิค */}
+          <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-lg font-black text-slate-800 flex items-center gap-3">
+                <span className="w-8 h-8 rounded-full bg-orange-50 text-orange-500 flex items-center justify-center text-sm">4</span>
+                ข้อมูลทางเทคนิค (Tech Specs)
+              </h2>
+            </div>
+
+            <div className="space-y-4">
+              {techSpecs.map((spec, index) => (
+                <div key={index} className="flex flex-col sm:flex-row gap-3 p-4 bg-slate-50 rounded-2xl relative sm:pr-14">
+                  <button
+                    type="button"
+                    onClick={() => removeTechSpec(index)}
+                    className="absolute top-4 right-4 sm:top-1/2 sm:-translate-y-1/2 text-slate-400 hover:text-red-500 transition-colors bg-white p-2 rounded-xl shadow-sm"
+                    title="ลบ"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                  <input
+                    type="text"
+                    placeholder="หัวข้อ (เช่น การเชื่อมต่อ)"
+                    value={spec.title}
+                    className="flex-1 bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-2 sm:mb-0"
+                    onChange={(e) => handleTechSpecChange(index, 'title', e.target.value)}
+                  />
+                  <input
+                    type="text"
+                    placeholder="รายละเอียด (เช่น WiFi 2.4GHz)"
+                    value={spec.description}
+                    className="flex-[2] bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                    onChange={(e) => handleTechSpecChange(index, 'description', e.target.value)}
+                  />
+                </div>
+              ))}
+              <button type="button" onClick={addTechSpec} className="w-full py-4 rounded-2xl border-2 border-dashed border-[#22C55E]/30 text-[#22C55E] font-bold text-sm hover:bg-emerald-50 transition-colors flex items-center justify-center gap-2">
+                <Plus size={16} /> เพิ่มสเปคเทคนิค
+              </button>
+            </div>
+          </div>
+
         </div>
 
         {/* --- Sidebar (Right Column) --- */}
         <div className="space-y-8">
 
-          {/* Section 3: รูปภาพ */}
+          {/* Section 5: รูปภาพ */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-            <h2 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-widest">รูปภาพสินค้า</h2>
+            <h2 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px]">5</span> รูปภาพสินค้า
+            </h2>
             <div className="w-full aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center text-slate-400 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
               <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
                 <UploadCloud size={24} className="text-[#22C55E]" />
@@ -298,8 +430,11 @@ export default function EditProductPage({ params }: { params: Promise<{ id: stri
             </div>
           </div>
 
-          {/* Section 4: ราคา สต็อก หมวดหมู่ การรับประกัน */}
+          {/* Section 6: ราคา สต็อก หมวดหมู่ การรับประกัน */}
           <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-6">
+            <h2 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-widest flex items-center gap-2">
+              <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px]">6</span> ราคา สต็อก และหมวดหมู่
+            </h2>
 
             <div>
               <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">

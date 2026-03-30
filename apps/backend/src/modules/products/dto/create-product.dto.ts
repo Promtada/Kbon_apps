@@ -48,4 +48,10 @@ export class CreateProductDto {
   @IsBoolean()
   @IsOptional()
   isPublished?: boolean;
+
+  @IsOptional()
+  includedItems?: any;
+
+  @IsOptional()
+  techSpecs?: any;
 }

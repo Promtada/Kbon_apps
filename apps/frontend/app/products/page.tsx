@@ -86,7 +86,10 @@ function ProductCard({ product }: { product: Product }) {
     : 0;
 
   return (
-    <div className="group bg-[#F8FAFC] rounded-[2.5rem] p-3 border border-transparent hover:border-emerald-100 hover:bg-white hover:shadow-2xl hover:shadow-emerald-100/60 transition-all duration-500 flex flex-col">
+    <Link
+      href={`/products/${product.id}`}
+      className="group bg-[#F8FAFC] rounded-[2.5rem] p-3 border border-transparent hover:border-emerald-100 hover:bg-white hover:shadow-2xl hover:shadow-emerald-100/60 transition-all duration-500 flex flex-col"
+    >
       {/* Image area */}
       <div className="relative aspect-square bg-white rounded-[2rem] overflow-hidden mb-4 flex items-center justify-center border border-slate-100 group-hover:border-emerald-100 transition-colors">
         {/* Discount badge */}
@@ -172,15 +175,13 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
 
-        {/* CTA Button */}
-        <Link
-          href={`/products/${product.id}`}
+        {/* CTA — styled div, outer Link handles navigation */}
+        <div
           className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
             product.stock === 0
-              ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+              ? 'bg-slate-100 text-slate-400'
               : 'bg-white border-2 border-slate-100 text-slate-600 group-hover:bg-[#22C55E] group-hover:text-white group-hover:border-[#22C55E] group-hover:shadow-lg group-hover:shadow-green-200 group-hover:-translate-y-0.5'
           }`}
-          onClick={(e) => product.stock === 0 && e.preventDefault()}
         >
           {product.stock === 0 ? (
             'สินค้าหมด'
@@ -190,9 +191,9 @@ function ProductCard({ product }: { product: Product }) {
               ดูรายละเอียด
             </>
           )}
-        </Link>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }
 
