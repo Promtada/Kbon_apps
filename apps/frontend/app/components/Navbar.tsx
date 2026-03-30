@@ -3,12 +3,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ShoppingCart, User } from 'lucide-react';
+import { ShoppingCart, User, LogOut } from 'lucide-react';
 import { useCart } from '../../store/useCartStore';
 
 export default function Navbar({ user }: { user?: any }) {
   const pathname = usePathname();
-  const { totalItems } = useCart();
+  const { totalItems, clearCart } = useCart();
   const [adminAvatar, setAdminAvatar] = React.useState<string | null>(null);
 
   React.useEffect(() => {
@@ -84,25 +84,45 @@ export default function Navbar({ user }: { user?: any }) {
 
           {/* Profile */}
           {user ? (
-            <Link
-              href={profilePath}
-              className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 cursor-pointer"
-            >
-              {(user.image || adminAvatar) ? (
-                <img src={adminAvatar || user.image} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
-              ) : (
-                <div className="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center text-[#22C55E] font-black text-xs border border-emerald-100">
-                  {initials}
+            <div className="relative group">
+              <div className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 cursor-pointer">
+                {(user.image || adminAvatar) ? (
+                  <img src={adminAvatar || user.image} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
+                ) : (
+                  <div className="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center text-[#22C55E] font-black text-xs border border-emerald-100">
+                    {initials}
+                  </div>
+                )}
+                <div className="hidden sm:block text-left">
+                  <p className="text-xs font-black text-slate-800 leading-none">{user.name}</p>
+                  <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{user.role}</p>
                 </div>
-              )}
-              <div className="hidden sm:block text-left">
-                <p className="text-xs font-black text-slate-800 leading-none">{user.name}</p>
-                <p className="text-[9px] text-slate-400 font-bold mt-1 uppercase tracking-widest">{user.role}</p>
               </div>
-            </Link>
+
+              {/* Enhanced Dropdown Menu */}
+              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-100 rounded-xl shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 py-2">
+                <Link href={profilePath} className="block px-4 py-2 text-sm font-bold text-slate-600 hover:text-[#22C55E] hover:bg-emerald-50 mx-2 rounded-lg">
+                  ไปที่แดชบอร์ด
+                </Link>
+                <div className="border-t border-slate-100 my-1 mx-2"></div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem('user');
+                    localStorage.removeItem('admin-token');
+                    clearCart();
+                    window.location.reload();
+                  }}
+                  className="w-[calc(100%-1rem)] mx-2 text-left flex items-center gap-2 px-4 py-2 text-sm font-bold text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                >
+                  <LogOut size={16} />
+                  ออกจากระบบ
+                </button>
+              </div>
+            </div>
           ) : (
-            <Link href="/login" className="flex items-center justify-center w-10 h-10 bg-slate-50 rounded-full text-slate-400 hover:text-[#22C55E] hover:bg-emerald-50 transition-all">
-              <User size={20} strokeWidth={2.5} />
+            <Link href="/login" className="flex items-center gap-2 px-4 py-2 bg-[#22C55E] text-white rounded-xl font-bold hover:bg-[#1eb054] hover:shadow-lg hover:shadow-green-200 transition-all text-sm">
+              <User size={16} strokeWidth={2.5} />
+              เข้าสู่ระบบ
             </Link>
           )}
         </div>

@@ -166,13 +166,14 @@ export default function CartPage() {
                   </div>
 
                   {/* Checkout button */}
-                  <button
+                  <Link
                     id="checkout-btn"
+                    href="/checkout"
                     className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] text-white font-black text-base rounded-2xl shadow-xl shadow-green-200 flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98] hover:-translate-y-0.5"
                   >
                     สั่งซื้อสินค้า
                     <ArrowRight size={20} />
-                  </button>
+                  </Link>
 
                   {/* Trust badges */}
                   <div className="grid grid-cols-3 gap-2 pt-1">

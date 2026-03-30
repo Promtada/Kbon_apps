@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 // 🌟 นำเข้า Navbar ปกติมาใช้
 import Navbar from '../components/Navbar'; 
 import { 
@@ -12,6 +12,7 @@ import {
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [user, setUser] = useState<any>(null);
 
   // 🌟 ดึงข้อมูล User จาก LocalStorage มาเตรียมไว้ส่งให้ Navbar
@@ -68,7 +69,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </nav>
 
         <div className="p-6 mt-auto border-t border-slate-50">
-           <button className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all font-bold text-sm">
+           <button 
+             onClick={() => {
+               localStorage.removeItem('admin-token');
+               localStorage.removeItem('user'); // Also clear mock user just in case
+               alert('ออกจากระบบสำเร็จ');
+               router.push('/');
+             }}
+             className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all font-bold text-sm"
+           >
               <LogOut size={20} />
               ออกจากระบบ
            </button>
