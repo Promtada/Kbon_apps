@@ -5,378 +5,466 @@ const prisma = new PrismaClient();
 const mockProducts = [
   // ---- AUTOMATION (5) ----
   {
-    name: 'Kbon Smart pH Controller V2',
-    description: 'เครื่องควบคุมค่า pH อัตโนมัติรุ่นอัปเกรด มาพร้อมระบบจ่ายสั่งการผ่านสมาร์ทโฟนและเซนเซอร์ความแม่นยำระดับอุตสาหกรรม',
-    price: 12900,
-    originalPrice: 14900,
-    stock: 15,
+    name: 'Growee Smart pH Controller Pro',
+    description: 'Autonomous pH balancing system designed to precisely dose pH Up and Down solutions to maintain optimal nutrient absorption in any hydroponic reservoir.',
+    price: 18900,
+    originalPrice: 21900,
+    stock: 12,
     category: 'Automation',
     warranty: '2 ปี',
-    features: ['ควบคุมแบบ Real-time', 'เซนเซอร์เกรดอุตสาหกรรมเยอรมัน', 'รองรับ WiFi 2.4GHz'],
+    features: ['Auto pH Balancing', 'Real-time Monitoring', 'App Controlled', 'Industrial Grade Probe'],
     isPublished: true,
-    sku: 'KB-AUTO-PH2',
+    sku: 'GRW-PH-PRO',
     mainImageUrl: 'https://images.unsplash.com/photo-1558449028-b53a39d100fc?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Main Controller Unit', subtitle: 'กล่องสมองกลหลัก', imageUrl: '' },
-      { title: 'pH Probe Sensor', subtitle: 'หัววัดค่า pH', imageUrl: '' },
-      { title: 'Peristaltic Pump', subtitle: 'ปั๊มสูบจ่าย 2 หัว', imageUrl: '' }
+      { title: 'Main Controller Console', subtitle: 'Smart Hub v2.0', imageUrl: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?q=80&w=400&fit=crop' },
+      { title: 'pH Probe Sensor', subtitle: 'Lab-grade (Glass)', imageUrl: 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=400&fit=crop' },
+      { title: 'Peristaltic Pump Head', subtitle: 'Dual Output 50ml/min', imageUrl: 'https://images.unsplash.com/photo-1606518778810-09ddacde54af?q=80&w=400&fit=crop' },
+      { title: 'Power Adapter', subtitle: '12V 2A DC', imageUrl: 'https://images.unsplash.com/photo-1584981144415-4ba8d6c70817?q=80&w=400&fit=crop' }
     ],
     techSpecs: [
-      { title: 'Connectivity', description: 'WiFi 2.4GHz b/g/n' },
-      { title: 'Power Input', description: '12V DC (Adapter Included)' }
+      { title: 'Connectivity', description: 'WiFi 2.4GHz 802.11 b/g/n' },
+      { title: 'Power Supply', description: '100-240V AC to 12V 2A DC' },
+      { title: 'Measurement Range', description: 'pH 0.00 to 14.00' },
+      { title: 'Accuracy', description: '± 0.02 pH' }
     ]
   },
   {
-    name: 'Kbon EC/TDS Doser System',
-    description: 'ระบบจ่ายธาตุอาหารอัตโนมัติ แม่นยำทุกหยด รักษาค่า EC ให้เสถียรเพื่อการเติบโตที่สมบูรณ์แบบ',
-    price: 14500,
-    originalPrice: 15500,
+    name: 'Kbon EC/TDS Nutrient Doser System',
+    description: 'Keep your nutrient levels perfectly dialed in. The Kbon Doser continuously checks electrical conductivity and doses A+B nutrients automatically.',
+    price: 15500,
+    originalPrice: 16500,
     stock: 8,
     category: 'Automation',
     warranty: '1 ปี',
-    features: ['ปั๊มรีดท่อคุณภาพสูง', 'ตั้งเวลาล่วงหน้าได้', 'แจ้งเตือนผ่านแอป'],
+    features: ['Precision Dosing', 'Dual A+B Support', 'EC Monitoring'],
     isPublished: true,
     sku: 'KB-AUTO-EC1',
     mainImageUrl: 'https://images.unsplash.com/photo-1520699918507-3c3e05c46b0c?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Doser Unit', subtitle: 'ชุดปั๊มสูบจ่าย A+B', imageUrl: '' },
-      { title: 'EC Probe', subtitle: 'หัววัดค่าความนำไฟฟ้า', imageUrl: '' }
+      { title: 'Doser Unit Console', subtitle: 'Motor Control Board', imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=400&fit=crop' },
+      { title: 'EC Conductivity Probe', subtitle: 'Titanium Pins', imageUrl: 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=400&fit=crop' },
+      { title: 'Silicone Tubing', subtitle: 'Food-grade 5 Meters', imageUrl: 'https://images.unsplash.com/photo-1582719202047-76d34324facc?q=80&w=400&fit=crop' }
     ],
     techSpecs: [
-      { title: 'Pump Flow', description: '50ml / minute' },
-      { title: 'Water Resistance', description: 'IP65 Enclosure' }
+      { title: 'Pump Flow Rate', description: '50ml per minute' },
+      { title: 'EC Range', description: '0 to 5.0 mS/cm' },
+      { title: 'Water Resistance', description: 'IP65 Rated Enclosure' }
     ]
   },
   {
-    name: 'Kbon Master Hub Pro',
-    description: 'ศูนย์กลางควบคุมทุกอุปกรณ์ไฮโดรโปนิกส์ในฟาร์มของคุณ เชื่อมต่อและสั่งการได้หลายโซนพร้อมกัน',
-    price: 9900,
+    name: 'Kbon Master Hub Pro 10-Zone',
+    description: 'The ultimate central command center for commercial farms. Connect and automate up to 10 independent growing zones from a single beautiful dashboard.',
+    price: 35000,
     originalPrice: null,
-    stock: 25,
+    stock: 5,
     category: 'Automation',
-    warranty: '1 ปี',
-    features: ['รองรับ 10 อุปกรณ์', 'บันทึกข้อมูลย้อนหลัง 1 ปี', 'จอทัชสกรีนในตัว'],
+    warranty: '3 ปี',
+    features: ['10 Multi-Zone Support', '7-inch IPS Touchscreen', 'Climate Control Logic', 'Irrigation Timers'],
     isPublished: true,
-    sku: 'KB-HUB-PRO',
+    sku: 'KB-HUB-PRO-10',
     mainImageUrl: 'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Master Hub Console', subtitle: 'หน้าจอควบคุมศูนย์กลาง', imageUrl: '' },
-      { title: 'Mounting Kit', subtitle: 'ชุดยึดติดผนัง', imageUrl: '' }
+      { title: 'Master Console Device', subtitle: '10-Zone Gateway', imageUrl: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=400&fit=crop' },
+      { title: 'Relay Expansion Box', subtitle: '8-Channel 220V', imageUrl: 'https://images.unsplash.com/photo-1584981144415-4ba8d6c70817?q=80&w=400&fit=crop' },
+      { title: 'DIN Rail Mounting Kit', subtitle: 'Industrial Standard', imageUrl: 'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?q=80&w=400&fit=crop' }
     ],
     techSpecs: [
-      { title: 'Display', description: '7" IPS Touchscreen' },
-      { title: 'Protocol', description: 'Zigbee 3.0 / WiFi' }
+      { title: 'Display Interface', description: '7" High-brightness IPS Touch' },
+      { title: 'Protocols', description: 'Zigbee 3.0, RS485 Modbus, WiFi' },
+      { title: 'Data Logging', description: '12-Month Cloud Storage Backup' },
+      { title: 'Housing', description: 'Aluminum Alloy Casing' }
     ]
   },
   {
-    name: 'Smart Environment Sensor',
-    description: 'เซนเซอร์วัดค่าอุณหภูมิและความชื้นอากาศ เชื่อมต่อไร้สาย แบตเตอรี่อึดทนทาน',
-    price: 1250,
-    originalPrice: 1500,
-    stock: 60,
-    category: 'Automation',
-    warranty: '6 เดือน',
-    features: ['เซนเซอร์ SHT30', 'แบตเตอรี่อยู่ได้ 2 ปี', 'รองรับ Apple HomeKit'],
-    isPublished: true,
-    sku: 'KB-SENS-ENV',
-    mainImageUrl: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?q=80&w=800&auto=format&fit=crop',
-    includedItems: [
-      { title: 'Sensor Body', subtitle: 'ตัววัดสภาพอากาศ', imageUrl: '' },
-      { title: 'CR2032 Battery', subtitle: 'ถ่านแบนเซนเซอร์', imageUrl: '' }
-    ],
-    techSpecs: [
-      { title: 'Temp Range', description: '-10 to 60°C' },
-      { title: 'Humidity Range', description: '0-99% RH' }
-    ]
-  },
-  {
-    name: 'Auto-Valve Water Level Controller',
-    description: 'อุปกรณ์เติมน้ำอัตโนมัติ รักษาระดับน้ำในถังสารอาหารไม่เคยพร่อง ป้องกันปั๊มไหม้',
-    price: 2450,
-    originalPrice: 3000,
-    stock: 12,
+    name: 'Smart Environment Climate Sensor',
+    description: 'Precision environmental sensor providing hyper-local temperature, humidity, and VPD (Vapor Pressure Deficit) metrics direct to your smartphone.',
+    price: 1850,
+    originalPrice: 2200,
+    stock: 45,
     category: 'Automation',
     warranty: '1 ปี',
-    features: ['วาล์วไฟฟ้าทองเหลือง', 'เซนเซอร์ลูกลอยแม่เหล็ก', 'ตัดไฟอัตโนมัติเมื่อน้ำรั่ว'],
+    features: ['VPD Calculation', 'Swiss SHT30 Chip', '2-Year Battery Life'],
+    isPublished: true,
+    sku: 'KB-SENS-CLIMATE',
+    mainImageUrl: 'https://images.unsplash.com/photo-1593941707882-a5bba14938c7?q=80&w=800&auto=format&fit=crop',
+    includedItems: [
+      { title: 'Climate Sensor Body', subtitle: 'Ultra-compact Design', imageUrl: 'https://images.unsplash.com/photo-1558449028-b53a39d100fc?q=80&w=400&fit=crop' },
+      { title: 'CR2032 Coin Battery', subtitle: 'Pre-installed', imageUrl: 'https://images.unsplash.com/photo-1623838493130-9bfa78f0d84c?q=80&w=400&fit=crop' },
+      { title: 'Wall Mount Bracket', subtitle: '3M Adhesive', imageUrl: 'https://images.unsplash.com/photo-1584981144415-4ba8d6c70817?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Temperature Range', description: '-10°C to +85°C' },
+      { title: 'Humidity Range', description: '0-99% RH (Non-condensing)' },
+      { title: 'Connectivity', description: 'Zigbee 3.0 (Hub Required)' },
+      { title: 'Accuracy', description: '± 0.3°C / ± 2% RH' }
+    ]
+  },
+  {
+    name: 'Auto-Valve Water Level Regulator',
+    description: 'Safeguard your water pumps from burning out. This solid brass solenoid valve and float sensor combo keeps your reservoir topped up automatically.',
+    price: 2800,
+    originalPrice: 3200,
+    stock: 22,
+    category: 'Automation',
+    warranty: '1 ปี',
+    features: ['Solid Brass Valve', 'Magnetic Float Sensor', 'Failsafe Auto-shutoff'],
     isPublished: true,
     sku: 'KB-VALV-LVL',
     mainImageUrl: 'https://images.unsplash.com/photo-1606518778810-09ddacde54af?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Solenoid Valve', subtitle: 'วาล์วไฟฟ้า 1/2"', imageUrl: '' },
-      { title: 'Float Sensor', subtitle: 'เซนเซอร์ลูกลอย', imageUrl: '' }
+      { title: 'Brass Solenoid Valve', subtitle: '1/2" Thread 12V', imageUrl: 'https://images.unsplash.com/photo-1606518778810-09ddacde54af?q=80&w=400&fit=crop' },
+      { title: 'Optical Float Sensor', subtitle: 'Dual-level detection', imageUrl: 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=400&fit=crop' },
+      { title: 'Smart Relay Switch', subtitle: '10A Control Relay', imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=400&fit=crop' }
     ],
-    techSpecs: []
+    techSpecs: [
+      { title: 'Valve Material', description: 'Solid Forged Brass' },
+      { title: 'Operating Pressure', description: '0.02 - 0.8 MPa' },
+      { title: 'Operating Voltage', description: '12V DC Safe Voltage' }
+    ]
   },
 
   // ---- SET (5) ----
   {
-    name: 'Starter Grow Kit แบบน้ำนิ่ง',
-    description: 'ชุดปลูกไฮโดรโปนิกส์สำหรับผู้เริ่มต้น (ระบบ Kratky) ปลูกง่ายไม่ต้องง้อปั๊มน้ำ',
-    price: 590,
-    originalPrice: null,
-    stock: 100,
-    category: 'Set',
-    warranty: 'ไม่มีรับประกัน',
-    features: ['ปุ๋ยฟรีในชุด', 'ฟองน้ำเพาะเมล็ด 1 แผ่น', 'ถ้วยปลูก 12 ใบ'],
-    isPublished: true,
-    sku: 'KB-SET-STD01',
-    mainImageUrl: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?q=80&w=800&auto=format&fit=crop',
-    includedItems: [
-      { title: 'Grow Box', subtitle: 'กล่องปลูกพลาสติกทึบแสง', imageUrl: '' },
-      { title: 'Seed Pack', subtitle: 'เมล็ดสลัดรวม 100 เมล็ด', imageUrl: '' }
-    ],
-    techSpecs: [
-      { title: 'Capacity', description: '12 หลุมปลูก' }
-    ]
-  },
-  {
-    name: 'NFT Professional System (2 เมตร)',
-    description: 'ชุดปลูกระบบราง NFT มาตรฐานฟาร์ม โครงอลูมิเนียมกันสนิมพร้อมระบบปั๊มน้ำวน',
-    price: 4900,
-    originalPrice: 5500,
-    stock: 10,
-    category: 'Set',
-    warranty: 'โครงสร้าง 5 ปี',
-    features: ['ราง NFT หนา 2มม.', 'ท่อส่งน้ำ PE อย่างดี', 'ปลูกได้ 40 ต้น'],
-    isPublished: true,
-    sku: 'KB-SET-NFT2M',
-    mainImageUrl: 'https://images.unsplash.com/photo-1530836369250-ef71a3f5e902?q=80&w=800&auto=format&fit=crop',
-    includedItems: [
-      { title: 'NFT Pipes', subtitle: 'รางปลูก 4 เส้น', imageUrl: '' },
-      { title: 'Water Pump', subtitle: 'ปั๊มน้ำรุ่น SOBO AP1000', imageUrl: '' }
-    ],
-    techSpecs: [
-      { title: 'Dimensions', description: '200 x 50 x 80 cm' }
-    ]
-  },
-  {
-    name: 'Smart Indoor Grow Tent Bundle',
-    description: 'ชุดเต็นท์ปลูกต้นไม้ในร่มขจัดปัญหากลิ่นและแมลง พร้อมระบบไฟ LED ครบชุด',
-    price: 18500,
-    originalPrice: 22000,
-    stock: 3,
+    name: 'Urban Indoor Grow Tent Bundle',
+    description: 'A complete indoor growing solution. Includes a highly reflective Mylar tent, full-spectrum LED light, and a high-efficiency carbon filter exhaust system.',
+    price: 24500,
+    originalPrice: 28500,
+    stock: 4,
     category: 'Set',
     warranty: '1 ปี',
-    features: ['เต็นท์ Mylar 600D', 'ไฟ GrowLight 240W', 'พัดลมดูดอากาศคาร์บอนฟิลเตอร์'],
+    features: ['120x120x200cm Mylar Tent', '300W LED Grow Light', 'Carbon Filter Ventilation'],
     isPublished: true,
-    sku: 'KB-TENT-BUNDLE',
+    sku: 'KB-TENT-MAX',
     mainImageUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Grow Tent 80x80x160', subtitle: 'เต็นท์ปลูก', imageUrl: '' },
-      { title: 'LED Quantum Board', subtitle: 'ไฟปลูกต้นไม้', imageUrl: '' }
+      { title: 'Premium Grow Tent', subtitle: '120x120x200 600D Mylar', imageUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=400&fit=crop' },
+      { title: 'LED Quantum Board', subtitle: '300W Samsung LM301B', imageUrl: 'https://images.unsplash.com/photo-1563200057-7977a41ecfcb?q=80&w=400&fit=crop' },
+      { title: 'Carbon Filter System', subtitle: '6-inch Duct + Inline Fan', imageUrl: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=400&fit=crop' },
+      { title: 'Rope Hangers', subtitle: 'Heavy Duty 1/8"', imageUrl: 'https://images.unsplash.com/photo-1584981144415-4ba8d6c70817?q=80&w=400&fit=crop' }
     ],
-    techSpecs: []
+    techSpecs: [
+      { title: 'Tent Footprint', description: '1.44 Square Meters' },
+      { title: 'Light Spectrum', description: '3000K + 5000K + 660nm Red' },
+      { title: 'Exhaust Power', description: '400 CFM Max Output' }
+    ]
   },
   {
-    name: 'Microgreens Easy Farm Kit',
-    description: 'ชุดปลูกต้นอ่อนยอดฮิต โตไวภายใน 7 วัน ทานได้ทั้งครอบครัว',
-    price: 350,
-    originalPrice: 490,
-    stock: 80,
+    name: 'Commercial NFT Hydroponics System (3m)',
+    description: 'A professional grade Nutrient Film Technique (NFT) channel system. Grow up to 60 heads of lettuce per unit. Includes rust-proof aluminum framing.',
+    price: 8900,
+    originalPrice: 11000,
+    stock: 6,
+    category: 'Set',
+    warranty: 'โครงสร้าง 5 ปี',
+    features: ['Food-grade PVC Channels', 'Rust-proof Aluminum Frame', '60 Planting Holes'],
+    isPublished: true,
+    sku: 'KB-SET-NFT3M',
+    mainImageUrl: 'https://images.unsplash.com/photo-1530836369250-ef71a3f5e902?q=80&w=800&auto=format&fit=crop',
+    includedItems: [
+      { title: 'NFT Channels', subtitle: '3 Meters x 4 Rows', imageUrl: 'https://images.unsplash.com/photo-1592424001806-081cf41c7b89?q=80&w=400&fit=crop' },
+      { title: 'Aluminum Frame', subtitle: 'Pre-drilled A-Frame', imageUrl: 'https://images.unsplash.com/photo-1582719202047-76d34324facc?q=80&w=400&fit=crop' },
+      { title: 'Submersible Pump', subtitle: '40W High-lift Pump', imageUrl: 'https://images.unsplash.com/photo-1534017684618-2ba4073fb8eb?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'System Dimensions', description: '300 L x 60 W x 120 H (cm)' },
+      { title: 'Channel Dimensions', description: '100mm wide x 50mm deep' },
+      { title: 'Material', description: 'UV-stabilized Food Grade PVC' }
+    ]
+  },
+  {
+    name: 'Starter Kratky Grow Kit',
+    description: 'Perfect for beginners. The easiest way to start hydroponic gardening with zero electricity required. Grow your first lettuce in 45 days.',
+    price: 690,
+    originalPrice: 890,
+    stock: 120,
     category: 'Set',
     warranty: 'ไม่มีรับประกัน',
-    features: ['วัสดุปลูกไร้ดิน', 'เมล็ดทานตะวัน+หัวไชเท้า', 'ถาดเพาะ 2 ชั้น'],
+    features: ['No Electricity Needed', 'Includes Seeds & Nutrients', 'Compact Footprint'],
     isPublished: true,
-    sku: 'KB-SET-MICRO',
-    mainImageUrl: 'https://plus.unsplash.com/premium_photo-1664115166465-985eb93d25fe?q=80&w=800&auto=format&fit=crop',
+    sku: 'KB-SET-KRATKY',
+    mainImageUrl: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Cultivation Tray', subtitle: 'ถาดมีรูและไม่มีรู', imageUrl: '' },
-      { title: 'Hemp Mat', subtitle: 'แผ่นปลูก', imageUrl: '' }
+      { title: 'Reservoir Box', subtitle: '15 Liter Opaque Box', imageUrl: 'https://plus.unsplash.com/premium_photo-1664115166465-985eb93d25fe?q=80&w=400&fit=crop' },
+      { title: 'Net Pots + Sponge', subtitle: '8-Hole Setup', imageUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=400&fit=crop' },
+      { title: 'Starter Nutrients', subtitle: '250ml A+B Set', imageUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=400&fit=crop' },
+      { title: 'Premium Seeds', subtitle: 'Green Oak & Red Oak', imageUrl: 'https://images.unsplash.com/photo-1592424001806-081cf41c7b89?q=80&w=400&fit=crop' }
     ],
-    techSpecs: []
+    techSpecs: [
+      { title: 'Capacity', description: '15 Liters Water, 8 Plants' },
+      { title: 'Dimensions', description: '40 x 30 x 15 cm' }
+    ]
   },
   {
-    name: 'Dutch Bucket System 10-Pot',
-    description: 'ชุดปลูกระบบน้ำหยดความจุ 10 ถัง เหมาะสำหรับพืชลูกหยั่งรากลึกเช่น มะเขือเทศ หรือ เมล่อน',
-    price: 3200,
-    originalPrice: null,
+    name: 'Dutch Bucket System (10-Pot Expansion)',
+    description: 'The industry standard for large fruiting crops like Tomatoes, Cucumbers, and Peppers. Includes 10 buckets with built-in siphon drains.',
+    price: 4500,
+    originalPrice: 5200,
     stock: 15,
     category: 'Set',
     warranty: 'โครงสร้าง 1 ปี',
-    features: ['ถัง Bato Bucket ทน UV', 'ระบบน้ำหยดครบชุด', 'ปั๊มสูบแรงดันสูง'],
+    features: ['Drip Emitter System', 'Perlite Included', 'Large Root Volume'],
     isPublished: true,
     sku: 'KB-SET-DUTCH10',
     mainImageUrl: 'https://images.unsplash.com/photo-1592424001806-081cf41c7b89?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Dutch Buckets', subtitle: '10 ใบ', imageUrl: '' }
+      { title: 'Bato Buckets', subtitle: '11 Liter Capacity (x10)', imageUrl: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?q=80&w=400&fit=crop' },
+      { title: 'Drip Manifold Kit', subtitle: 'Tubing & Emitters', imageUrl: 'https://images.unsplash.com/photo-1606518778810-09ddacde54af?q=80&w=400&fit=crop' },
+      { title: 'Siphon Elbows', subtitle: 'Drainage Control', imageUrl: 'https://images.unsplash.com/photo-1582719202047-76d34324facc?q=80&w=400&fit=crop' }
     ],
-    techSpecs: []
+    techSpecs: [
+      { title: 'Bucket Volume', description: '11 Liters Per Bucket' },
+      { title: 'Drip Rate', description: '2 Liters per Hour (2L/H Emitters)' },
+      { title: 'Material', description: 'UV-resistant Heavy Duty PP' }
+    ]
+  },
+  {
+    name: 'Microgreens Easy Farm Starter',
+    description: 'Grow healthy, nutrient-dense superfoods right on your kitchen counter. Harvest fresh microgreens in just 7-10 days.',
+    price: 490,
+    originalPrice: 650,
+    stock: 50,
+    category: 'Set',
+    warranty: 'ไม่มีรับประกัน',
+    features: ['Soil-less Growing', 'Organic Seeds included', 'No Pests or Mess'],
+    isPublished: true,
+    sku: 'KB-SET-MICRO',
+    mainImageUrl: 'https://plus.unsplash.com/premium_photo-1664115166465-985eb93d25fe?q=80&w=800&auto=format&fit=crop',
+    includedItems: [
+      { title: 'BPA-Free Trays', subtitle: '1 Solid, 1 Mesh Bottom', imageUrl: 'https://images.unsplash.com/photo-1592424001806-081cf41c7b89?q=80&w=400&fit=crop' },
+      { title: 'Hemp Growing Mats', subtitle: 'Biodegradable (x2)', imageUrl: 'https://plus.unsplash.com/premium_photo-1678122394541-e945e412d0c2?q=80&w=400&fit=crop' },
+      { title: 'Organic Seed Mix', subtitle: 'Radish & Sunflower', imageUrl: 'https://images.unsplash.com/photo-1591857177580-dc82b9ac4e1e?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Tray Dimensions', description: '10x20 inches (Standard 1020)' },
+      { title: 'Growth Medium', description: '100% Natural Hemp Fiber' }
+    ]
   },
 
   // ---- NUTRIENT (5) ----
   {
-    name: 'Premium Nutrient Mix A+B (1 ลิตร)',
-    description: 'ปุ๋ยอาหารพืชคุณภาพสูง AB สูตรเฉพาะสำหรับสลัดและผักกินใบ แร่ธาตุครบดูดซึมง่าย',
-    price: 250,
-    originalPrice: 300,
-    stock: 200,
+    name: 'Premium Nutrient Formula A+B (2 Liters)',
+    description: 'Highly concentrated, high-yield hydroponic base nutrient. Specifically blended for leafy greens and herbs with a perfect macronutrient ratio.',
+    price: 450,
+    originalPrice: 550,
+    stock: 300,
     category: 'Nutrient',
     warranty: 'ไม่มีรับประกัน',
-    features: ['ไนโตรเจนสูง', 'พืชโตไว ใบกรอบ', 'ไม่ตกตะกอนง่าย'],
+    features: ['No Clogging', 'Chelated Iron', 'Nitrogen Heavy for Greens'],
     isPublished: true,
-    sku: 'KB-NUT-AB1L',
+    sku: 'KB-NUT-AB2L',
     mainImageUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'Nutrient A', subtitle: '1 ลิตร', imageUrl: '' },
-      { title: 'Nutrient B', subtitle: '1 ลิตร', imageUrl: '' }
+      { title: 'Part A Solution', subtitle: 'Calcium/Nitrogen Heavy (1L)', imageUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=400&fit=crop' },
+      { title: 'Part B Solution', subtitle: 'Phosphorus/Potassium (1L)', imageUrl: 'https://images.unsplash.com/photo-1574943320219-553eb213f72d?q=80&w=400&fit=crop' },
+      { title: 'Measuring Cup', subtitle: '50ml Syringe', imageUrl: 'https://images.unsplash.com/photo-1581092583537-20d51b4b4f1b?q=80&w=400&fit=crop' }
     ],
-    techSpecs: []
+    techSpecs: [
+      { title: 'NPK Ratio (Combined)', description: '5-12-26' },
+      { title: 'Dilution Rate', description: '5ml of A + 5ml of B per 1 Liter Water' },
+      { title: 'Form', description: 'Liquid Concentrate' }
+    ]
   },
   {
-    name: 'pH Down - Phosphoric Acid 85%',
-    description: 'น้ำยาปรับลดค่า pH ชนิดความเข้มข้นสูง สำหรับสมดุลน้ำในไฮโดรโปนิกส์ให้อยู่ในระดับ 5.5 - 6.5',
-    price: 150,
-    originalPrice: null,
-    stock: 150,
+    name: 'Liquid pH Down (Phosphoric Acid 85%)',
+    description: 'Industrial strength acid buffer to safely lower the pH of your hydroponic reservoir. A little goes a very long way.',
+    price: 220,
+    originalPrice: 290,
+    stock: 140,
     category: 'Nutrient',
     warranty: 'ไม่มีรับประกัน',
-    features: ['ใช้แค่นิดเดียว', 'ไม่เป็นอันตรายต่อราก', 'เกรดอาหาร (Food Grade)'],
+    features: ['Food Grade', 'Highly Concentrated', 'Adds trace phosphorus'],
     isPublished: true,
     sku: 'KB-NUT-PHDOWN',
     mainImageUrl: 'https://plus.unsplash.com/premium_photo-1678122394541-e945e412d0c2?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
-    techSpecs: []
+    includedItems: [
+      { title: 'pH Down Bottle', subtitle: '500ml Storage', imageUrl: 'https://plus.unsplash.com/premium_photo-1678122394541-e945e412d0c2?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Active Ingredient', description: 'Phosphoric Acid (H3PO4)' },
+      { title: 'Concentration', description: '85% Solution' },
+      { title: 'Caution', description: 'Corrosive. Handle with gloves.' }
+    ]
   },
   {
-    name: 'pH Up - Potassium Hydroxide',
-    description: 'น้ำยาปรับเพิ่มค่า pH ในกรณีที่น้ำเป็นกรดเกินไป เพิ่มธาตุโพแทสเซียมให้พืชทางอ้อม',
-    price: 150,
+    name: 'Liquid pH Up (Potassium Hydroxide)',
+    description: 'Safely raise the pH of your nutrient solution if your source water is too acidic or if nutrients drop the pH too low.',
+    price: 220,
     originalPrice: null,
-    stock: 120,
+    stock: 85,
     category: 'Nutrient',
     warranty: 'ไม่มีรับประกัน',
-    features: ['ละลายน้ำง่าย', 'ปลอดภัย ไร้สารตกค้าง'],
+    features: ['Rapid Adjustment', 'Prevents Nutrient Lockout', 'Adds Potassium'],
     isPublished: true,
     sku: 'KB-NUT-PHUP',
     mainImageUrl: 'https://images.unsplash.com/photo-1616782481977-cb0208fa7563?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
-    techSpecs: []
+    includedItems: [
+      { title: 'pH Up Bottle', subtitle: '500ml Storage', imageUrl: 'https://images.unsplash.com/photo-1616782481977-cb0208fa7563?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Active Ingredient', description: 'Potassium Hydroxide (KOH)' },
+      { title: 'Concentration', description: 'Liquid Substrate' }
+    ]
   },
   {
-    name: 'Root Booster Extract 100ml',
-    description: 'สารสกัดสาหร่ายทะเลสีน้ำตาล เร่งการแตกรากพืช ลดความเครียดตอนย้ายกล้า',
-    price: 490,
-    originalPrice: 590,
+    name: 'Kelp Magic Root Extract (100ml)',
+    description: '100% Organic cold-pressed ascetic kelp extract. Contains natural rooting hormones, cytokines, and trace minerals for explosive root growth.',
+    price: 550,
+    originalPrice: 650,
     stock: 45,
     category: 'Nutrient',
     warranty: 'ไม่มีรับประกัน',
-    features: ['เร่งราก 3X', 'ฟื้นฟูรากเน่า', 'สารอินทรีย์ 100%'],
+    features: ['Explosive Rooting', 'Cures Transplant Shock', '100% Organic'],
     isPublished: true,
     sku: 'KB-NUT-ROOT',
     mainImageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
-    techSpecs: []
+    includedItems: [
+      { title: 'Kelp Extract Dropper', subtitle: '100ml Glass Bottle', imageUrl: 'https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Source', description: 'Ascophyllum Nodosum (North Atlantic Kelp)' },
+      { title: 'Dosage', description: '1-2ml per 10 Liters' }
+    ]
   },
   {
-    name: 'Cal-Mag Plus Supplement 500ml',
-    description: 'อาหารเสริมแคลเซียมและแมกนีเซียม แก้ปัญหาใบหงิก ปลายใบไหม้ สำหรับพืชที่ปลูกในน้ำ RO',
-    price: 320,
-    originalPrice: null,
-    stock: 65,
+    name: 'Cal-Mag Plus Advanced Supplement',
+    description: 'Essential Calcium, Magnesium, and Iron supplement. Prevents blossom end rot, leaf tip burn, and overall deficiency when using RO water.',
+    price: 390,
+    originalPrice: 450,
+    stock: 90,
     category: 'Nutrient',
     warranty: 'ไม่มีรับประกัน',
-    features: ['ดูดซึมทันที', 'เสริมโครงสร้างเซลล์'],
+    features: ['Fixes Yellowing Leaves', 'EDTA Chelated Iron', 'Crucial for RO Water'],
     isPublished: true,
     sku: 'KB-NUT-CALMAG',
     mainImageUrl: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
-    techSpecs: []
+    includedItems: [
+      { title: 'Cal-Mag Bottle', subtitle: '500ml Concentrate', imageUrl: 'https://images.unsplash.com/photo-1528698827591-e19ccd7bc23d?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Calcium (Ca)', description: '3.2%' },
+      { title: 'Magnesium (Mg)', description: '1.2%' },
+      { title: 'Iron (Fe)', description: '0.1% Chelated' }
+    ]
   },
 
   // ---- HARDWARE (5) ----
   {
-    name: 'LED Grow Light Quantum Board 240W',
-    description: 'หลอดไฟ LED สำหรับปลูกต้นไม้ในร่ม Full Spectrum เลียนแบบแสงอาทิตย์ได้ใกล้เคียงที่สุด',
-    price: 5900,
-    originalPrice: 6500,
-    stock: 20,
+    name: 'Samsung LM301H Full Spectrum LED Board (240W)',
+    description: 'The pinnacle of indoor LED grow light efficiency. Featuring genuine Samsung LM301H diodes and Osram Deep Red for incredible canopy penetration.',
+    price: 7900,
+    originalPrice: 9500,
+    stock: 25,
     category: 'Hardware',
-    warranty: '2 ปี',
-    features: ['Samsung LM301H Diodes', 'MeanWell Driver', 'ปรับลดแสงได้ (Dimmable)'],
+    warranty: '3 ปี',
+    features: ['3.1 µmol/J Efficiency', 'MeanWell Premium Driver', 'Dimmable Knob', 'Zero Noise (Fanless)'],
     isPublished: true,
     sku: 'KB-HW-LED240',
     mainImageUrl: 'https://images.unsplash.com/photo-1563200057-7977a41ecfcb?q=80&w=800&auto=format&fit=crop',
     includedItems: [
-      { title: 'LED Board', subtitle: 'แผงไฟปลูกต้นไม้', imageUrl: '' },
-      { title: 'Power Driver', subtitle: 'ไดร์เวอร์จ่ายไฟ', imageUrl: '' }
+      { title: 'LED Quantum Board', subtitle: 'Dual Panel Heatsink', imageUrl: 'https://images.unsplash.com/photo-1563200057-7977a41ecfcb?q=80&w=400&fit=crop' },
+      { title: 'MeanWell Driver', subtitle: 'XLG-240-H', imageUrl: 'https://images.unsplash.com/photo-1584981144415-4ba8d6c70817?q=80&w=400&fit=crop' },
+      { title: 'Hanging Kit', subtitle: 'Steel Carabiners & Wires', imageUrl: 'https://images.unsplash.com/photo-1582719202047-76d34324facc?q=80&w=400&fit=crop' }
     ],
     techSpecs: [
-      { title: 'Power Output', description: '240 Watts' },
-      { title: 'Coverage', description: '120x60 cm' }
+      { title: 'Diodes', description: 'Samsung LM301H + Osram 660nm Red + 730nm IR' },
+      { title: 'Efficacy', description: '3.1 µmol/J' },
+      { title: 'Power Draw', description: '240 Watts from Wall' },
+      { title: 'Spectrum', description: '3000K + 5000K Full Spectrum' }
     ]
   },
   {
-    name: 'Submersible Water Pump AP-1000',
-    description: 'ปั๊มน้ำแช่คุณภาพสูงสำหรับระบบไฮโดรโปนิกส์ ทำงานเงียบ และประหยัดไฟ',
-    price: 350,
-    originalPrice: null,
-    stock: 50,
+    name: 'SOBO AP-1000 Submersible Water Pump',
+    description: 'Extremely reliable completely submersible water pump. Perfect for pushing water up through NFT channel manifolds or circulating nutrient reservoirs.',
+    price: 490,
+    originalPrice: 650,
+    stock: 120,
     category: 'Hardware',
-    warranty: '6 เดือน',
-    features: ['ปั๊มขึ้นสูง 1 เมตร', 'แกนสแตนเลส'],
+    warranty: '1 ปี',
+    features: ['Ultra-Quiet Operation', 'Ceramic Impeller Shaft', 'Low Power Consumption'],
     isPublished: true,
     sku: 'KB-HW-PUMP1K',
     mainImageUrl: 'https://images.unsplash.com/photo-1534017684618-2ba4073fb8eb?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
+    includedItems: [
+      { title: 'Pump Body', subtitle: 'Submersible Enclosure', imageUrl: 'https://images.unsplash.com/photo-1534017684618-2ba4073fb8eb?q=80&w=400&fit=crop' },
+      { title: 'Nozzle Adapters', subtitle: '12mm & 16mm Thread', imageUrl: 'https://images.unsplash.com/photo-1582719202047-76d34324facc?q=80&w=400&fit=crop' }
+    ],
     techSpecs: [
-      { title: 'Flow Rate', description: '400 L/hr' },
-      { title: 'Power', description: '8W' }
+      { title: 'Max Flow Rate', description: '400 L/Hr' },
+      { title: 'Max Head Height (H.Max)', description: '1.2 Meters' },
+      { title: 'Power Consumption', description: '8 Watts' }
     ]
   },
   {
-    name: 'Inline Duct Fan 4 นิ้ว (พัดลมดูดอากาศ)',
-    description: 'พัดลมดูด หรือเป่าอากาศ สำหรับระบบเต็นท์ปลูก เร่งการระบายความร้อน กลิ่น และความชื้น',
-    price: 1800,
-    originalPrice: 2100,
-    stock: 35,
+    name: 'AC Infinity Cloudline T4 Inline Duct Fan',
+    description: 'Smart and quiet ventilation. The Cloudline T4 features a PWM-controlled EC motor and smart thermostat controller for precise exhaust handling.',
+    price: 5200,
+    originalPrice: 5900,
+    stock: 18,
     category: 'Hardware',
-    warranty: '1 ปี',
-    features: ['ปรับความเร็วได้', 'ทำงานเงียบ 32dB'],
+    warranty: '2 ปี',
+    features: ['Virtually Silent EC Motor', 'Digital Thermostat Controller', '10-Speed PWM'],
     isPublished: true,
-    sku: 'KB-HW-FAN4',
+    sku: 'KB-HW-INF-T4',
     mainImageUrl: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
-    techSpecs: []
+    includedItems: [
+      { title: 'Inline Fan 4"', subtitle: 'Polycarbonate Body', imageUrl: 'https://images.unsplash.com/photo-1527661591475-527312dd65f5?q=80&w=400&fit=crop' },
+      { title: 'Smart Controller', subtitle: 'Temp/Humidity Sensor Probe', imageUrl: 'https://images.unsplash.com/photo-1518531933037-91b2f5f229cc?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Airflow', description: '205 CFM Max' },
+      { title: 'Noise Level', description: '28 dBA at Max Speed' },
+      { title: 'Duct Size', description: '4 Inches (100mm)' }
+    ]
   },
   {
-    name: 'Sponge Rockwool Cubes (แผ่นเพาะเมล็ดแบบฟองน้ำ)',
-    description: 'ฟองน้ำคุณภาพ เกรดไฮเปอร์สเปซ ดูดซึมน้ำดี ไม่สะสมเชื้อรา เหมาะกับการเริ่มปลูกทุกชนิด',
-    price: 60,
-    originalPrice: null,
-    stock: 300,
+    name: 'Premium Sponge GroCubes (96 Holes x3)',
+    description: 'High porosity sponge material tailored specifically for hydroponic seed germination. Provides optimal moisture retention while maintaining high airflow to roots.',
+    price: 180,
+    originalPrice: 220,
+    stock: 450,
     category: 'Hardware',
     warranty: 'ไม่มีรับประกัน',
-    features: ['กรีดร่องพร้อมปลูก', '1 แผ่น 96 หลุม'],
+    features: ['Pre-sliced T-Slots', 'Zero Mess or Dust', 'Perfect Water/Air Ratio'],
     isPublished: true,
-    sku: 'KB-HW-SPONGE',
-    mainImageUrl: 'https://images.unsplash.com/photo-1606518778810-09ddacde54af?q=80&w=800&auto=format&fit=crop', // Reusing placeholder abstract texture
-    includedItems: [],
-    techSpecs: []
+    sku: 'KB-HW-SPONGE-3',
+    mainImageUrl: 'https://plus.unsplash.com/premium_photo-1678122394541-e945e412d0c2?q=80&w=800&auto=format&fit=crop',
+    includedItems: [
+      { title: 'Sponge Sheets', subtitle: '3 Sheets (96 holes each)', imageUrl: 'https://plus.unsplash.com/premium_photo-1678122394541-e945e412d0c2?q=80&w=400&fit=crop' }
+    ],
+    techSpecs: [
+      { title: 'Material', description: 'Open-cell Polyurethane' },
+      { title: 'Dimensions', description: 'Base 25mm x Height 25mm (Per Cube)' }
+    ]
   },
   {
-    name: 'Net Cups (ถ้วยปลูกสีขาว ขอบหนา)',
-    description: 'ถ้วยปลูกไฮโดรโพนิกส์ ขนาดมาตรฐาน ไซส์ปาก 5 เซนติเมตร ทนแสง UV ไม่กรอบแตกง่าย ผิวเรียบลื่นรากเกาะง่าย',
-    price: 100,
-    originalPrice: 150,
-    stock: 500,
+    name: 'Heavy Duty Net Pots 2-Inch (Pack of 100)',
+    description: 'Thick, UV-stabilized heavy duty plastic net pots. Wide lip edge allows pots to rest perfectly in PVC pipes or DWC lids without falling through.',
+    price: 250,
+    originalPrice: 350,
+    stock: 200,
     category: 'Hardware',
-    warranty: 'เปลี่ยนคืนได้กรณีหัก',
-    features: ['แพ็ค 100 ใบ', 'Plastic เกรดอาหาร', 'ล้างใช้ซ้ำได้'],
+    warranty: '1 ปี',
+    features: ['UV Inhibitor Treated', 'Wide Lip Comfort Design', 'Reusable for Decades'],
     isPublished: true,
-    sku: 'KB-HW-CUP100',
+    sku: 'KB-HW-NET2IN',
     mainImageUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=800&auto=format&fit=crop',
-    includedItems: [],
+    includedItems: [
+      { title: 'Net Pots', subtitle: '100 Pieces', imageUrl: 'https://images.unsplash.com/photo-1622383563227-04401ab4e5ea?q=80&w=400&fit=crop' }
+    ],
     techSpecs: [
-      { title: 'Size', description: '5cm Diameter' }
+      { title: 'Top Diameter', description: '2 Inches (50mm)' },
+      { title: 'Height', description: '2.5 Inches (63mm)' },
+      { title: 'Material', description: 'BPA-Free Polypropylene' }
     ]
   }
 ];
 
 async function main() {
-  console.log('🌱 Cleansing database... existing products are being removed.');
+  console.log('🌱 Cleansing database... removing legacy products.');
   await prisma.product.deleteMany();
 
-  console.log('✨ Seeding 20 mock hydroponics and automation products...');
+  console.log('✨ Seeding 20 premium mock hydroponics products...');
   for (const productData of mockProducts) {
     const p = await prisma.product.create({
       data: {
@@ -385,10 +473,10 @@ async function main() {
         techSpecs: productData.techSpecs,
       }
     });
-    console.log(` • Created: ${p.name}`);
+    console.log(` • Inserted: ${p.name}`);
   }
 
-  console.log('✅ Seeding completed beautifully.');
+  console.log('✅ Seeding completed beautifully with rich metadata!');
 }
 
 main()

@@ -4,15 +4,13 @@ import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { ProductCard } from '../../components/shared/ProductCard';
 import {
-  ShoppingCart,
   Search,
-  SlidersHorizontal,
-  Leaf,
   Loader2,
   AlertCircle,
   ChevronRight,
-  Star,
+  ChevronLeft,
   Package,
 } from 'lucide-react';
 
@@ -35,29 +33,33 @@ interface Product {
 // ---- Constants ------------------------------------------------------------
 
 const API_BASE = 'http://localhost:4000/api';
+const ITEMS_PER_PAGE = 8;
 
 const CATEGORIES = ['ทั้งหมด', 'Automation', 'Set', 'Nutrient', 'Hardware'];
 
 const CATEGORY_LABELS: Record<string, string> = {
   'ทั้งหมด': 'ทั้งหมด',
-  Automation: 'Automation System',
+  Automation: 'Automation',
   Set: 'Combo Set',
   Nutrient: 'Nutrients & pH',
-  Hardware: 'Hardware Parts',
+  Hardware: 'Hardware',
 };
 
 // ---- Sub-components -------------------------------------------------------
 
 function ProductCardSkeleton() {
   return (
-    <div className="bg-white rounded-[2.5rem] p-3 border border-slate-100 animate-pulse">
-      <div className="aspect-square bg-slate-100 rounded-[2rem] mb-5" />
-      <div className="px-2 pb-2 space-y-3">
-        <div className="h-3 bg-slate-100 rounded-full w-1/3" />
-        <div className="h-5 bg-slate-100 rounded-full w-4/5" />
+    <div className="bg-white rounded-[2.5rem] p-4 border border-slate-100 animate-pulse h-full flex flex-col">
+      <div className="aspect-square bg-slate-50 rounded-[2rem] mb-6" />
+      <div className="flex-1 space-y-4 px-2">
+        <div className="h-4 bg-slate-100 rounded-full w-1/3" />
+        <div className="h-6 bg-slate-100 rounded-full w-4/5" />
         <div className="h-4 bg-slate-100 rounded-full w-full" />
-        <div className="h-4 bg-slate-100 rounded-full w-2/3" />
-        <div className="h-12 bg-slate-100 rounded-2xl mt-4" />
+        <div className="h-4 bg-slate-100 rounded-full w-2/3 mt-auto" />
+      </div>
+      <div className="pt-4 mt-6 border-t border-slate-50 flex justify-between items-center px-2">
+        <div className="h-8 bg-slate-100 rounded-full w-1/3" />
+        <div className="h-10 w-10 bg-slate-100 rounded-2xl" />
       </div>
     </div>
   );
@@ -65,12 +67,12 @@ function ProductCardSkeleton() {
 
 function EmptyState({ searchTerm, category }: { searchTerm: string; category: string }) {
   return (
-    <div className="col-span-full flex flex-col items-center justify-center py-28 text-center">
+    <div className="col-span-full flex flex-col items-center justify-center py-28 text-center bg-white rounded-[3rem] border border-slate-100">
       <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
         <Package size={36} className="text-[#22C55E]" />
       </div>
-      <h3 className="text-xl font-black text-slate-700 mb-2">ไม่พบสินค้า</h3>
-      <p className="text-slate-400 text-sm max-w-xs">
+      <h3 className="text-2xl font-black text-slate-800 mb-2">ไม่พบสินค้า</h3>
+      <p className="text-slate-500 font-medium max-w-md">
         {searchTerm
           ? `ไม่พบสินค้าที่ตรงกับ "${searchTerm}" ในหมวด ${CATEGORY_LABELS[category]}`
           : `ยังไม่มีสินค้าในหมวด ${CATEGORY_LABELS[category]}`}
@@ -79,131 +81,94 @@ function EmptyState({ searchTerm, category }: { searchTerm: string; category: st
   );
 }
 
-function ProductCard({ product }: { product: Product }) {
-  const hasDiscount =
-    product.originalPrice != null && product.originalPrice > product.price;
-  const discountPct = hasDiscount
-    ? Math.round(((product.originalPrice! - product.price) / product.originalPrice!) * 100)
-    : 0;
+// ---- Pagination Component -------------------------------------------------
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+}
+
+function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
+  if (totalPages <= 1) return null;
+
+  // Build page number array with ellipsis
+  const getPageNumbers = (): (number | '...')[] => {
+    const pages: (number | '...')[] = [];
+    const delta = 1; // pages around current
+
+    const rangeStart = Math.max(2, currentPage - delta);
+    const rangeEnd = Math.min(totalPages - 1, currentPage + delta);
+
+    pages.push(1);
+    if (rangeStart > 2) pages.push('...');
+    for (let i = rangeStart; i <= rangeEnd; i++) pages.push(i);
+    if (rangeEnd < totalPages - 1) pages.push('...');
+    if (totalPages > 1) pages.push(totalPages);
+
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
 
   return (
-    <Link
-      href={`/products/${product.id}`}
-      className="group bg-[#F8FAFC] rounded-[2.5rem] p-3 border border-transparent hover:border-emerald-100 hover:bg-white hover:shadow-2xl hover:shadow-emerald-100/60 transition-all duration-500 flex flex-col"
+    <nav
+      aria-label="Product pagination"
+      className="flex items-center justify-center gap-2 mt-14"
     >
-      {/* Image area */}
-      <div className="relative aspect-square bg-white rounded-[2rem] overflow-hidden mb-4 flex items-center justify-center border border-slate-100 group-hover:border-emerald-100 transition-colors">
-        {/* Discount badge */}
-        {hasDiscount && (
-          <div className="absolute top-4 left-4 z-10 bg-[#22C55E] text-white text-[10px] font-black py-1.5 px-3 rounded-xl shadow-sm uppercase tracking-widest">
-            -{discountPct}%
-          </div>
-        )}
-        {/* Stock badge */}
-        {product.stock === 0 && (
-          <div className="absolute top-4 right-4 z-10 bg-red-500 text-white text-[10px] font-black py-1.5 px-3 rounded-xl shadow-sm uppercase tracking-widest">
-            หมด
-          </div>
-        )}
-        {/* Product image placeholder */}
-        {/* Product image placeholder or actual image */}
-        {product.mainImageUrl ? (
-          <img 
-            src={product.mainImageUrl} 
-            alt={product.name} 
-            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
-          />
-        ) : (
-          <div className="flex flex-col items-center gap-3 text-slate-300 group-hover:scale-105 transition-transform duration-500">
-            <div className="relative">
-              <div className="w-24 h-24 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full flex items-center justify-center shadow-inner">
-                <Leaf size={40} className="text-[#22C55E] opacity-60" />
-              </div>
-              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-                <span className="text-[10px] font-black text-[#22C55E]">K</span>
-              </div>
-            </div>
-            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Product Image</span>
-          </div>
-        )}
+      {/* Previous */}
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold text-slate-600 bg-white border border-slate-200 shadow-sm
+                   hover:border-[#22C55E] hover:text-[#22C55E] hover:shadow-md
+                   disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600 disabled:hover:shadow-sm
+                   transition-all duration-200"
+      >
+        <ChevronLeft size={16} />
+        <span className="hidden sm:inline">ก่อนหน้า</span>
+      </button>
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]" />
-      </div>
-
-      {/* Content */}
-      <div className="flex flex-col flex-1 px-2 pb-2">
-        {/* Category tag */}
-        <span className="text-[10px] font-black uppercase tracking-widest text-[#22C55E] mb-2">
-          {product.category}
-        </span>
-
-        {/* Product name */}
-        <h3 className="font-black text-base text-slate-800 mb-1.5 leading-snug line-clamp-2 min-h-[2.8rem]">
-          {product.name}
-        </h3>
-
-        {/* Description snippet */}
-        {product.description && (
-          <p className="text-slate-400 text-xs leading-relaxed line-clamp-2 mb-3 font-medium">
-            {product.description}
-          </p>
-        )}
-
-        {/* Features (first 2 only) */}
-        {product.features.length > 0 && (
-          <ul className="space-y-1 mb-4">
-            {product.features.slice(0, 2).map((f, i) => (
-              <li key={i} className="flex items-start gap-1.5 text-[11px] text-slate-500 font-medium">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#22C55E] mt-1 flex-shrink-0" />
-                <span className="line-clamp-1">{f}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {/* Spacer */}
-        <div className="flex-1" />
-
-        {/* Pricing */}
-        <div className="flex items-baseline gap-2 mb-4 mt-2">
-          <span className="text-2xl font-black text-[#22C55E]">
-            ฿{product.price.toLocaleString('th-TH')}
-          </span>
-          {hasDiscount && (
-            <span className="text-sm text-slate-400 line-through font-medium">
-              ฿{product.originalPrice!.toLocaleString('th-TH')}
+      {/* Page Numbers */}
+      <div className="flex items-center gap-1.5">
+        {pageNumbers.map((page, index) =>
+          page === '...' ? (
+            <span
+              key={`ellipsis-${index}`}
+              className="w-10 h-10 flex items-center justify-center text-slate-400 font-bold text-sm"
+            >
+              …
             </span>
-          )}
-        </div>
-
-        {/* Warranty */}
-        {product.warranty && product.warranty !== 'ไม่มีรับประกัน' && (
-          <div className="flex items-center gap-1.5 mb-4">
-            <Star size={11} className="text-amber-400 fill-amber-400" />
-            <span className="text-[10px] text-slate-400 font-bold">รับประกัน {product.warranty}</span>
-          </div>
-        )}
-
-        {/* CTA — styled div, outer Link handles navigation */}
-        <div
-          className={`w-full py-3.5 rounded-2xl font-black text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-            product.stock === 0
-              ? 'bg-slate-100 text-slate-400'
-              : 'bg-white border-2 border-slate-100 text-slate-600 group-hover:bg-[#22C55E] group-hover:text-white group-hover:border-[#22C55E] group-hover:shadow-lg group-hover:shadow-green-200 group-hover:-translate-y-0.5'
-          }`}
-        >
-          {product.stock === 0 ? (
-            'สินค้าหมด'
           ) : (
-            <>
-              <ShoppingCart size={16} />
-              ดูรายละเอียด
-            </>
-          )}
-        </div>
+            <button
+              key={page}
+              onClick={() => onPageChange(page as number)}
+              aria-current={currentPage === page ? 'page' : undefined}
+              className={`w-10 h-10 rounded-full text-sm font-black transition-all duration-200 ${
+                currentPage === page
+                  ? 'bg-[#22C55E] text-white shadow-lg shadow-[#22C55E]/30 scale-110'
+                  : 'bg-white text-slate-600 border border-slate-200 shadow-sm hover:border-[#22C55E] hover:text-[#22C55E] hover:shadow-md'
+              }`}
+            >
+              {page}
+            </button>
+          )
+        )}
       </div>
-    </Link>
+
+      {/* Next */}
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="flex items-center gap-1.5 px-4 py-2.5 rounded-full text-sm font-bold text-slate-600 bg-white border border-slate-200 shadow-sm
+                   hover:border-[#22C55E] hover:text-[#22C55E] hover:shadow-md
+                   disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:border-slate-200 disabled:hover:text-slate-600 disabled:hover:shadow-sm
+                   transition-all duration-200"
+      >
+        <span className="hidden sm:inline">ถัดไป</span>
+        <ChevronRight size={16} />
+      </button>
+    </nav>
   );
 }
 
@@ -216,6 +181,7 @@ export default function ProductsPage() {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Restore user session
   useEffect(() => {
@@ -231,7 +197,6 @@ export default function ProductsPage() {
       const res = await fetch(`${API_BASE}/products`);
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data: Product[] = await res.json();
-      // Filter only published products client-side
       setAllProducts(data.filter((p) => p.isPublished));
     } catch (err) {
       console.error('Failed to fetch products:', err);
@@ -245,6 +210,17 @@ export default function ProductsPage() {
     fetchProducts();
   }, [fetchProducts]);
 
+  // Reset to page 1 whenever filters change
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1);
+  };
+
+  const handleCategoryChange = (cat: string) => {
+    setActiveCategory(cat);
+    setCurrentPage(1);
+  };
+
   // Filter logic
   const filteredProducts = allProducts.filter((p) => {
     const matchesCategory = activeCategory === 'ทั้งหมด' || p.category === activeCategory;
@@ -256,6 +232,19 @@ export default function ProductsPage() {
     return matchesCategory && matchesSearch;
   });
 
+  // Pagination logic
+  const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    // Smooth scroll back to the grid top
+    document.getElementById('product-grid-anchor')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900">
       <Navbar user={user} />
@@ -263,7 +252,7 @@ export default function ProductsPage() {
       <main className="flex-grow">
 
         {/* ---- Hero Banner ---- */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 py-20 px-6">
+        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-6">
           {/* Decorative blobs */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#22C55E]/20 rounded-full blur-[120px]" />
@@ -272,24 +261,20 @@ export default function ProductsPage() {
 
           <div className="max-w-7xl mx-auto relative z-10">
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-8">
+            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-10">
               <Link href="/" className="hover:text-[#22C55E] transition-colors">หน้าแรก</Link>
               <ChevronRight size={14} />
               <span className="text-[#22C55E]">สินค้าทั้งหมด</span>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
               <div>
-                <div className="inline-flex items-center gap-2 bg-[#22C55E]/10 border border-[#22C55E]/20 text-[#22C55E] px-4 py-2 rounded-full text-[10px] font-black uppercase tracking-widest mb-5">
-                  <Leaf size={12} />
-                  Kbon Hydroponics Store
-                </div>
-                <h1 className="text-4xl md:text-5xl font-black text-white tracking-tight leading-[1.1]">
-                  สินค้าทั้งหมด
-                  <span className="block text-[#22C55E] mt-1">Smart Farming Collection</span>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
+                  Kbon Store
+                  <span className="block text-[#22C55E] mt-2">Smart Farming Gear</span>
                 </h1>
-                <p className="text-slate-400 mt-4 text-base font-medium max-w-lg leading-relaxed">
-                  อุปกรณ์ไฮโดรโปนิกส์อัจฉริยะ ออกแบบมาเพื่อเกษตรกรยุคใหม่
+                <p className="text-slate-400 mt-5 text-lg font-medium max-w-lg leading-relaxed">
+                  Discover high-end hydroponic automation, absolute precision nutrients, and professional tier hardware for modern growers.
                 </p>
               </div>
 
@@ -311,49 +296,65 @@ export default function ProductsPage() {
           </div>
         </section>
 
-        {/* ---- Filters & Grid ---- */}
-        <section className="max-w-7xl mx-auto px-6 py-12">
+        {/* ---- Inline Search + Filter Bar ---- */}
+        <div className="sticky top-0 z-30 bg-white/80 backdrop-blur-xl border-b border-slate-100 shadow-sm">
+          <div className="max-w-7xl mx-auto px-6 py-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
 
-          {/* Search + Filter bar */}
-          <div className="flex flex-col md:flex-row gap-4 mb-10">
-            {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-              <input
-                type="text"
-                placeholder="ค้นหาสินค้า..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-white border border-slate-100 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#22C55E]/20 shadow-sm placeholder:text-slate-300"
-              />
-            </div>
+              {/* Search Input */}
+              <div className="relative flex-1 min-w-0">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={18} />
+                <input
+                  type="text"
+                  id="product-search"
+                  placeholder="ค้นหาสินค้า, หมวดหมู่, อุปกรณ์..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="w-full bg-white border border-slate-200 rounded-full py-3 pl-11 pr-5 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#22C55E]/20 focus:border-[#22C55E] shadow-sm placeholder:text-slate-400 placeholder:font-medium transition-all"
+                />
+              </div>
 
-            {/* Category pills */}
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 flex-shrink-0">
-              <SlidersHorizontal size={16} className="text-slate-300 flex-shrink-0 ml-1" />
-              {CATEGORIES.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`flex-shrink-0 px-4 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                    activeCategory === cat
-                      ? 'bg-[#22C55E] text-white shadow-md shadow-green-200'
-                      : 'bg-white text-slate-500 border border-slate-100 hover:border-[#22C55E]/30 hover:text-[#22C55E]'
-                  }`}
-                >
-                  {CATEGORY_LABELS[cat]}
-                </button>
-              ))}
+              {/* Divider (desktop only) */}
+              <div className="hidden sm:block w-px h-8 bg-slate-200 flex-shrink-0" />
+
+              {/* Category Pills */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
+                {CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => handleCategoryChange(cat)}
+                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                      activeCategory === cat
+                        ? 'bg-[#22C55E] text-white shadow-md shadow-[#22C55E]/30 scale-105'
+                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                    }`}
+                  >
+                    {CATEGORY_LABELS[cat]}
+                  </button>
+                ))}
+              </div>
+
             </div>
           </div>
+        </div>
+
+        {/* ---- Filters & Grid ---- */}
+        <section
+          id="product-grid-anchor"
+          className="max-w-7xl mx-auto px-6 py-12 lg:py-16 scroll-mt-20"
+        >
 
           {/* Result count */}
           {!isLoading && !error && (
-            <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mb-6">
-              แสดง {filteredProducts.length} รายการ
-              {activeCategory !== 'ทั้งหมด' && ` · ${CATEGORY_LABELS[activeCategory]}`}
-              {searchTerm && ` · ค้นหา "${searchTerm}"`}
-            </p>
+            <div className="flex items-center gap-4 mb-8">
+              <div className="h-px bg-slate-200 flex-1" />
+              <p className="text-xs text-slate-400 font-extrabold uppercase tracking-widest whitespace-nowrap px-4 bg-white border border-slate-200 rounded-full py-2">
+                พบ {filteredProducts.length} รายการ
+                {activeCategory !== 'ทั้งหมด' && ` · ${CATEGORY_LABELS[activeCategory]}`}
+                {totalPages > 1 && ` · หน้า ${currentPage}/${totalPages}`}
+              </p>
+              <div className="h-px bg-slate-200 flex-1" />
+            </div>
           )}
 
           {/* Error state */}
@@ -375,15 +376,27 @@ export default function ProductsPage() {
 
           {/* Product grid */}
           {!error && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 transition-opacity duration-300"
+              style={{ minHeight: isLoading ? 'auto' : undefined }}
+            >
               {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)
-                : filteredProducts.length === 0
+                ? Array.from({ length: ITEMS_PER_PAGE }).map((_, i) => <ProductCardSkeleton key={i} />)
+                : paginatedProducts.length === 0
                 ? <EmptyState searchTerm={searchTerm} category={activeCategory} />
-                : filteredProducts.map((product) => (
+                : paginatedProducts.map((product) => (
                     <ProductCard key={product.id} product={product} />
                   ))}
             </div>
+          )}
+
+          {/* Pagination */}
+          {!isLoading && !error && filteredProducts.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              onPageChange={handlePageChange}
+            />
           )}
 
         </section>

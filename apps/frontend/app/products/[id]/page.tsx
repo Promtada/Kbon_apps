@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
+import { useCart } from '../../../store/useCartStore';
 import Footer from '../../components/Footer';
 import {
   ChevronRight,
@@ -20,6 +21,8 @@ import {
   Truck,
   RotateCcw,
   Package,
+  Zap,
+  Check,
 } from 'lucide-react';
 
 // ---- Types ----------------------------------------------------------------
@@ -305,12 +308,14 @@ function ReviewsList({ reviews }: { reviews: ProductReview[] }) {
 export default function ProductDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = React.use(params);
   const router = useRouter();
+  const { addItem } = useCart();
 
   const [user, setUser] = useState<any>(null);
   const [product, setProduct] = useState<Product | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
+  const [addedToCart, setAddedToCart] = useState(false);
 
   // Restore user session
   useEffect(() => {
@@ -355,6 +360,20 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
     if (product && quantity < product.stock) setQuantity((q) => q + 1);
   };
   const decrementQty = () => setQuantity((q) => Math.max(1, q - 1));
+
+  // Cart actions
+  const handleAddToCart = () => {
+    if (!product || product.stock === 0) return;
+    addItem(product as any, quantity);
+    setAddedToCart(true);
+    setTimeout(() => setAddedToCart(false), 2000);
+  };
+
+  const handleBuyNow = () => {
+    if (!product || product.stock === 0) return;
+    addItem(product as any, quantity);
+    router.push('/cart');
+  };
 
   // Derived values
   const hasDiscount = product?.originalPrice != null && product.originalPrice > product.price;
@@ -581,31 +600,59 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
-              {/* Add to cart button */}
+              {/* Add to Cart + Buy Now */}
               <div className="flex flex-col sm:flex-row gap-3">
+                {/* Add to Cart */}
                 <button
+                  id="product-add-to-cart"
+                  onClick={handleAddToCart}
                   disabled={product.stock === 0}
                   className={`flex-1 py-4 rounded-2xl font-black text-base flex items-center justify-center gap-3 transition-all duration-300 ${
                     product.stock === 0
                       ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                      : addedToCart
+                      ? 'bg-emerald-600 text-white shadow-xl shadow-green-200'
                       : 'bg-[#22C55E] text-white shadow-xl shadow-green-200 hover:bg-[#1eb054] hover:-translate-y-0.5 hover:shadow-green-300 active:scale-[0.98]'
                   }`}
                 >
-                  <ShoppingCart size={20} strokeWidth={2.5} />
-                  {product.stock === 0 ? 'สินค้าหมด' : 'เพิ่มลงตะกร้า'}
+                  {addedToCart ? (
+                    <><Check size={20} strokeWidth={3} /> เพิ่มแล้ว!</>
+                  ) : (
+                    <><ShoppingCart size={20} strokeWidth={2.5} /> {product.stock === 0 ? 'สินค้าหมด' : 'เพิ่มลงตะกร้า'}</>
+                  )}
                 </button>
 
+                {/* Buy Now */}
                 <button
+                  id="product-buy-now"
+                  onClick={handleBuyNow}
                   disabled={product.stock === 0}
-                  className={`sm:w-auto px-6 py-4 rounded-2xl font-black text-sm border-2 transition-all ${
+                  className={`sm:w-auto px-7 py-4 rounded-2xl font-black text-sm border-2 flex items-center justify-center gap-2 transition-all ${
                     product.stock === 0
                       ? 'border-slate-100 text-slate-300 cursor-not-allowed'
-                      : 'border-[#22C55E] text-[#22C55E] hover:bg-emerald-50 active:scale-[0.98]'
+                      : 'border-[#22C55E] text-[#22C55E] hover:bg-[#22C55E] hover:text-white hover:shadow-lg hover:shadow-green-200 active:scale-[0.98]'
                   }`}
                 >
+                  <Zap size={16} strokeWidth={2.5} />
                   สั่งซื้อทันที
                 </button>
               </div>
+
+              {/* Add-to-cart success toast */}
+              {addedToCart && (
+                <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-3.5 animate-[fadeIn_0.2s_ease]">
+                  <Check size={18} className="text-[#22C55E] flex-shrink-0" strokeWidth={3} />
+                  <div>
+                    <p className="text-sm font-black text-emerald-800">เพิ่มลงตะกร้าแล้ว!</p>
+                    <p className="text-xs text-emerald-600 font-medium">
+                      {quantity} ชิ้น ·{' '}
+                      <Link href="/cart" className="underline hover:text-emerald-800 transition-colors">
+                        ดูตะกร้า →
+                      </Link>
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Trust badges */}
               <TrustBadges warranty={product.warranty} />
