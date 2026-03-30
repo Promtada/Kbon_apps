@@ -8,6 +8,7 @@ import React, {
   useCallback,
   useMemo,
 } from 'react';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 // ---- Types ----------------------------------------------------------------
 
@@ -107,7 +108,7 @@ interface CartContextValue {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
-const STORAGE_KEY = 'kbon_cart_items';
+const STORAGE_KEY = STORAGE_KEYS.CART;
 
 const initialState: CartState = { items: [] };
 

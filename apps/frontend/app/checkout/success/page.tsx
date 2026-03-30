@@ -5,12 +5,13 @@ import Link from 'next/link';
 import { CheckCircle2, ShoppingBag, ArrowRight } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
+import { STORAGE_KEYS } from '../../../lib/storageKeys';
 
 export default function CheckoutSuccessPage() {
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
-    const saved = localStorage.getItem('user');
+    const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) setUser(JSON.parse(saved));
   }, []);
 

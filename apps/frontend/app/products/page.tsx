@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { ProductCard } from '../../components/shared/ProductCard';
+import { STORAGE_KEYS } from '../../lib/storageKeys';
 import {
   Search,
   Loader2,
@@ -185,7 +186,7 @@ export default function ProductsPage() {
 
   // Restore user session
   useEffect(() => {
-    const saved = localStorage.getItem('user');
+    const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) setUser(JSON.parse(saved));
   }, []);
 

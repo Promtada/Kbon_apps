@@ -6,13 +6,14 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import { ShoppingCart, Leaf, Zap, Globe, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
+import { STORAGE_KEYS } from '../lib/storageKeys';
 
 export default function LandingPage() {
   const [user, setUser] = useState<any>(null);
 
   // เช็คสถานะ Login เพื่อส่งไปให้ Navbar โชว์ Profile
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }

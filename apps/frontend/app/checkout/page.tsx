@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useCart } from '../../store/useCartStore';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
+import { STORAGE_KEYS } from '../../lib/storageKeys';
 import { 
   ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck, 
   ArrowRight, Truck, Tag, Loader2
@@ -23,7 +24,7 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     setIsClient(true);
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
 

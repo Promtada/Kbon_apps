@@ -5,43 +5,49 @@ import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
+import { STORAGE_KEYS } from '../../../lib/storageKeys';
+import { useAuthStore } from '../../../store/useAuthStore';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [error, setError] = useState('');
+  const [isMounted, setIsMounted] = useState(false);
   const [isLoading, setIsLoading] = useState(true); 
   const [isSubmitting, setIsSubmitting] = useState(false); 
   const router = useRouter();
+  const login = useAuthStore((state) => state.login);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const authUser = useAuthStore((state) => state.user);
 
+  // Step 1: Mark as mounted so we know localStorage is safe to access
   useEffect(() => {
-    const token = Cookies.get('access_token');
-    const savedUser = localStorage.getItem('user');
+    setIsMounted(true);
+  }, []);
 
-    // 🌟 1. เช็คสิทธิ์และ Redirect อัตโนมัติเมื่อรีเฟรชหน้า
-    if (token && savedUser) {
-      try {
-        const user = JSON.parse(savedUser);
-        if (user.role === 'ADMIN') {
-          router.push('/admin/dashboard');
-        } else {
-          router.push('/dashboard');
-        }
-        return;
-      } catch (e) {
-        console.error("User data error");
+  // Step 2: Only check auth + redirect AFTER the component has mounted on the client
+  useEffect(() => {
+    if (!isMounted) return;
+
+    // Check with store first, fallback to old localStorage if needed for legacy
+    if (isAuthenticated && authUser) {
+      if (authUser.role === 'ADMIN') {
+        router.push('/admin/dashboard');
+      } else {
+        router.push('/dashboard');
       }
+      return;
     }
 
-    const savedEmail = localStorage.getItem('kbon_remembered_email');
+    const savedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL);
     if (savedEmail) {
       setEmail(savedEmail);
       setRememberMe(true);
     }
     
     setIsLoading(false);
-  }, [router]);
+  }, [isMounted, isAuthenticated, authUser, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,14 +64,13 @@ export default function LoginPage() {
 
       // จัดการระบบ Remember Me
       if (rememberMe) {
-        localStorage.setItem('kbon_remembered_email', email);
+        localStorage.setItem(STORAGE_KEYS.REMEMBERED_EMAIL, email);
       } else {
-        localStorage.removeItem('kbon_remembered_email');
+        localStorage.removeItem(STORAGE_KEYS.REMEMBERED_EMAIL);
       }
 
-      // เก็บข้อมูลผู้ใช้
-      localStorage.setItem('access_token', accessToken);
-      localStorage.setItem('user', JSON.stringify(user));
+      // 🌟 1. Call login from the exact new useAuthStore
+      login(user, accessToken);
       
       const expiryDays = rememberMe ? 30 : 7;
       const cookieOptions = { expires: expiryDays, secure: true, sameSite: 'strict' as const };
@@ -74,11 +79,7 @@ export default function LoginPage() {
       Cookies.set('refresh_token', refreshToken, cookieOptions);
 
       // 🌟 2. แยกทางไปตาม Role หลัง Login สำเร็จ
-      if (user.role === 'ADMIN') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
+      router.push(user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');

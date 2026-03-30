@@ -1,47 +1,16 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-// ✅ แก้ไข Path: ต้องถอย 3 ชั้นเพื่อให้ถึงโฟลเดอร์ app และเข้า components
-import Navbar from '../../components/Navbar'; 
-import api from '../../../lib/axios'; 
+import { useAuthStore } from '../../../store/useAuthStore';
 import { Sprout, Activity, AlertCircle, LayoutGrid } from 'lucide-react'; 
 
 export default function DashboardPage() {
-  const [user, setUser] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const user = useAuthStore((state) => state.user);
 
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await api.get('/auth/me');
-        setUser(response.data);
-      } catch (error) {
-        console.error('Failed to fetch profile:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchProfile();
-  }, []);
-
-  if (loading) return (
-    <div className="min-h-screen bg-[#F8FAFC] flex justify-center items-center">
-      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#22C55E]"></div>
-    </div>
-  );
-  
-  if (!user) return <div className="min-h-screen bg-[#F8FAFC]"></div>;
+  if (!user) return <div className="animate-pulse bg-slate-100 rounded-3xl h-64 w-full"></div>;
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
-      
-      {/* 🌟 จุดที่ต้องแก้: ต้องส่ง user={user} เข้าไปใน Navbar ด้วยเพื่อให้ Profile Dropdown ทำงานได้ */}
-      <Navbar user={user} />
-
-      <main className="flex-grow p-6 md:p-10">
-        <div className="max-w-7xl mx-auto">
-          
-          {/* --- Header: คำทักทาย --- */}
+    <div className="w-full">
+      {/* --- Header: คำทักทาย --- */}
           <div className="mb-10 animate-in fade-in slide-in-from-top-4 duration-700">
             <h1 className="text-3xl font-black text-slate-800 tracking-tight">
               สวัสดี, <span className="text-[#22C55E]">{user.name}</span> 🌱
@@ -92,8 +61,6 @@ export default function DashboardPage() {
             </div>
           </div>
 
-        </div>
-      </main>
     </div>
   );
 }

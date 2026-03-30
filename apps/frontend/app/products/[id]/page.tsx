@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import { useCart } from '../../../store/useCartStore';
 import Footer from '../../components/Footer';
+import { STORAGE_KEYS } from '../../../lib/storageKeys';
 import {
   ChevronRight,
   ShoppingCart,
@@ -319,7 +320,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
   // Restore user session
   useEffect(() => {
-    const saved = localStorage.getItem('user');
+    const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) setUser(JSON.parse(saved));
   }, []);
 

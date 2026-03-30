@@ -9,6 +9,9 @@ import {
   LayoutDashboard, Box, Users, ShoppingCart, 
   Tag, LogOut, Settings 
 } from 'lucide-react';
+import Cookies from 'js-cookie';
+import { STORAGE_KEYS } from '../../lib/storageKeys';
+import { useAuthStore } from '../../store/useAuthStore';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -17,7 +20,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // 🌟 ดึงข้อมูล User จาก LocalStorage มาเตรียมไว้ส่งให้ Navbar
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
+    const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     if (savedUser) {
       setUser(JSON.parse(savedUser));
     }
@@ -71,10 +74,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 mt-auto border-t border-slate-50">
            <button 
              onClick={() => {
-               localStorage.removeItem('admin-token');
-               localStorage.removeItem('user'); // Also clear mock user just in case
+               // 1. Clear Zustand Auth store
+               useAuthStore.getState().logout();
+
+               // 2. Nuke auth cookies
+               Cookies.remove('access_token');
+               Cookies.remove('refresh_token');
+
+               // 3. FORCE CLEAR: Nuke ALL localStorage to catch rogue sigma_ keys
+               localStorage.clear();
+
                alert('ออกจากระบบสำเร็จ');
-               router.push('/');
+               router.replace('/login');
              }}
              className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all font-bold text-sm"
            >
