@@ -7,6 +7,18 @@ import { ShoppingCart, User } from 'lucide-react';
 
 export default function Navbar({ user }: { user?: any }) {
   const pathname = usePathname();
+  const [adminAvatar, setAdminAvatar] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    if (user?.role === 'ADMIN') {
+      fetch('http://localhost:4000/api/settings')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.admin_avatar_url) setAdminAvatar(data.admin_avatar_url);
+        })
+        .catch((err) => console.error('Failed to fetch global settings for avatar', err));
+    }
+  }, [user]);
 
   // สร้าง Initials จากชื่อ User เพื่อทำเป็น Avatar (เช่น "Kbon Admin" -> "KA")
   const initials = user?.name 
@@ -71,8 +83,8 @@ export default function Navbar({ user }: { user?: any }) {
               className="flex items-center gap-3 p-1 pr-3 rounded-full hover:bg-slate-50 transition-all border border-transparent hover:border-slate-200 cursor-pointer"
             >
               {/* รูป Avatar */}
-              {user.image ? (
-                 <img src={user.image} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
+              {(user.image || adminAvatar) ? (
+                 <img src={adminAvatar || user.image} alt={user.name} className="w-9 h-9 rounded-full object-cover" />
               ) : (
                  <div className="w-9 h-9 bg-emerald-50 rounded-full flex items-center justify-center text-[#22C55E] font-black text-xs border border-emerald-100">
                     {initials}

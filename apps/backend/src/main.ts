@@ -1,10 +1,21 @@
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common'; // เพิ่มตัวนี้
+import { NestExpressApplication } from '@nestjs/platform-express';
+import { join } from 'path';
+import * as fs from 'fs';
 import { AppModule } from './app.module';
 
-
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // 0. ให้บริการไฟล์ Static (รูปภาพ/วิดีโอ) ที่อัปโหลดมา
+  const uploadsPath = join(process.cwd(), 'uploads');
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+  }
+  app.useStaticAssets(uploadsPath, {
+    prefix: '/uploads/',
+  });
 
   // 1. ปลดล็อค CORS: สำคัญมากเพื่อให้ Frontend (พอร์ต 3000) ยิงมาหา Backend (พอร์ต 4000) ได้
   app.enableCors({
