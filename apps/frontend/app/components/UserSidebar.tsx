@@ -2,21 +2,20 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { LayoutDashboard, Package, MapPin, Settings, LogOut } from 'lucide-react';
 import { useCart } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
 
 export default function UserSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
   const { clearCart } = useCart();
 
   const links = [
-    { name: 'ภาพรวมฟาร์ม', href: '/account', icon: <LayoutDashboard size={20} /> },
-    { name: 'ประวัติการสั่งซื้อ', href: '/account/orders', icon: <Package size={20} /> },
-    { name: 'สมุดที่อยู่', href: '/account/addresses', icon: <MapPin size={20} /> },
-    { name: 'ตั้งค่าบัญชี', href: '/account/settings', icon: <Settings size={20} /> },
+    { name: 'ภาพรวมบัญชี', href: '/account', icon: <LayoutDashboard size={18} /> },
+    { name: 'ประวัติการสั่งซื้อ', href: '/account/orders', icon: <Package size={18} /> },
+    { name: 'สมุดที่อยู่', href: '/account/addresses', icon: <MapPin size={18} /> },
+    { name: 'ตั้งค่าบัญชี', href: '/account/settings', icon: <Settings size={18} /> },
   ];
 
   const handleLogout = async () => {
@@ -28,58 +27,60 @@ export default function UserSidebar() {
     localStorage.clear();
     sessionStorage.clear();
 
-    // 3. Nuke ALL cookies as a failsafe
+    // 3. Nuke ALL cookies
     document.cookie.split(';').forEach((c) => {
       document.cookie = c
         .replace(/^ +/, '')
         .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
     });
 
-    // 4. FORCE HARD RELOAD to login (destroys bfcache — no zombie sessions)
+    // 4. Hard reload to login (destroys bfcache)
     window.location.href = '/login';
   };
 
   return (
-    <aside className="w-full h-full bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-6 flex flex-col min-h-[500px]">
-      <div className="mb-8 px-4">
-        <h2 className="text-xl font-black text-slate-800 tracking-tight">เมนูส่วนตัว</h2>
-        <p className="text-xs text-slate-400 font-medium mt-1">จัดการข้อมูลบัญชีและการสั่งซื้อ</p>
+    <aside className="bg-white rounded-2xl shadow-sm border border-slate-100 p-5 flex flex-col">
+
+      {/* Header */}
+      <div className="mb-5 px-2">
+        <h2 className="text-sm font-black text-slate-800 tracking-tight">บัญชีของฉัน</h2>
+        <p className="text-[10px] text-slate-300 font-medium mt-0.5">จัดการข้อมูลและการสั่งซื้อ</p>
       </div>
 
-      <nav className="flex-1 space-y-2">
+      {/* Navigation */}
+      <nav className="flex-1 space-y-1">
         {links.map((link) => {
           const isActive = pathname === link.href;
           return (
             <Link
               key={link.name}
               href={link.href}
-              className={`flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm transition-all duration-200 group ${
+              className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-[13px] transition-all duration-150 group ${
                 isActive
-                  ? 'bg-emerald-50 text-[#22C55E] shadow-sm'
-                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-800'
+                  ? 'bg-emerald-50 text-[#22C55E]'
+                  : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
               }`}
             >
-              <div
+              <span
                 className={`${
-                  isActive ? 'text-[#22C55E]' : 'text-slate-400 group-hover:text-slate-600'
+                  isActive ? 'text-[#22C55E]' : 'text-slate-400 group-hover:text-slate-500'
                 } transition-colors`}
               >
                 {link.icon}
-              </div>
+              </span>
               {link.name}
             </Link>
           );
         })}
       </nav>
 
-      <div className="pt-6 mt-6 border-t border-slate-100">
+      {/* Logout */}
+      <div className="pt-4 mt-4 border-t border-slate-100">
         <button
           onClick={handleLogout}
-          className="w-full flex items-center gap-4 px-5 py-4 rounded-2xl font-bold text-sm text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all duration-200 group"
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-[13px] text-red-400 hover:bg-red-50 hover:text-red-500 transition-all duration-150 group"
         >
-          <div className="text-slate-400 group-hover:text-red-500 transition-colors">
-            <LogOut size={20} />
-          </div>
+          <LogOut size={18} className="text-red-300 group-hover:text-red-500 transition-colors" />
           ออกจากระบบ
         </button>
       </div>
