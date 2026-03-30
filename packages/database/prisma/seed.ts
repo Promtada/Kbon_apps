@@ -567,6 +567,7 @@ async function main() {
           }),
           trackingNumber: i > 0 ? `TH${Date.now()}88${i}` : null,
           paymentMethod: i % 2 === 0 ? 'Credit Card' : 'Bank Transfer',
+          paymentStatus: i % 2 === 0 ? 'PAID' : 'UNPAID',
           items: {
             create: orderItemsData,
           }

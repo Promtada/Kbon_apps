@@ -57,6 +57,7 @@ model Order {
 
   trackingNumber String?
   paymentMethod  String?
+  paymentStatus  String @default("UNPAID")
 
   items OrderItem[]
 
