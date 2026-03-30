@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { ProductImageUpload } from '../../../../components/shared/ProductImageUpload';
+import { ImageUploadField } from '../../../../components/shared/ImageUploadField';
 import { ArrowLeft, UploadCloud, Save, Plus, Trash2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
 
 interface IncludedItem {
@@ -30,6 +32,7 @@ export default function CreateProductPage() {
     description: '',
     warranty: '1 ปี',
     isPublished: true,
+    mainImageUrl: '',
   });
 
   // รายการคุณสมบัติเด่น (Features List)
@@ -92,6 +95,7 @@ export default function CreateProductPage() {
       features: features.filter((f) => f.trim() !== ''),
       includedItems: includedItems.filter((item) => item.title.trim() !== ''),
       techSpecs: techSpecs.filter((spec) => spec.title.trim() !== ''),
+      mainImageUrl: formData.mainImageUrl || undefined,
     };
 
     try {
@@ -246,36 +250,35 @@ export default function CreateProductPage() {
 
             <div className="space-y-4">
               {includedItems.map((item, index) => (
-                <div key={index} className="flex flex-col gap-3 p-4 bg-slate-50 rounded-2xl relative">
+                <div key={index} className="flex flex-col sm:flex-row items-start gap-4 p-4 bg-slate-50 rounded-2xl relative">
                   <button
                     type="button"
                     onClick={() => removeIncludedItem(index)}
-                    className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors bg-white p-2 rounded-xl shadow-sm"
+                    className="absolute top-4 right-4 text-slate-400 hover:text-red-500 transition-colors bg-white p-2 rounded-xl shadow-sm z-10"
                     title="ลบ"
                   >
                     <Trash2 size={16} />
                   </button>
-                  <div className="pr-12">
+
+                  <ImageUploadField 
+                    value={item.imageUrl}
+                    onChange={(url) => handleIncludedItemChange(index, 'imageUrl', url)}
+                  />
+
+                  <div className="flex-1 w-full sm:pr-10">
                     <input
                       type="text"
                       placeholder="ชื่ออุปกรณ์ (เช่น pH Balancer)"
                       value={item.title}
-                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-2"
+                      className="w-full bg-white border border-slate-100 rounded-xl py-3 px-4 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-3"
                       onChange={(e) => handleIncludedItemChange(index, 'title', e.target.value)}
                     />
                     <input
                       type="text"
                       placeholder="คำอธิบายสั้นๆ (เช่น Balance pH Up and Down)"
                       value={item.subtitle}
-                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none mb-2"
+                      className="w-full bg-white border border-slate-100 rounded-xl py-3 px-4 text-sm text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
                       onChange={(e) => handleIncludedItemChange(index, 'subtitle', e.target.value)}
-                    />
-                    <input
-                      type="text"
-                      placeholder="URL รูปภาพ (เช่น https://...)"
-                      value={item.imageUrl}
-                      className="w-full bg-white border border-slate-100 rounded-xl py-2 px-3 text-sm font-mono text-slate-500 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
-                      onChange={(e) => handleIncludedItemChange(index, 'imageUrl', e.target.value)}
                     />
                   </div>
                 </div>
@@ -338,13 +341,12 @@ export default function CreateProductPage() {
             <h2 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-widest flex items-center gap-2">
               <span className="w-6 h-6 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[10px]">5</span> รูปภาพสินค้า
             </h2>
-            <div className="w-full aspect-square border-2 border-dashed border-slate-200 rounded-[2rem] flex flex-col items-center justify-center text-slate-400 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer group">
-               <div className="w-16 h-16 bg-white rounded-full shadow-sm flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
-                 <UploadCloud size={24} className="text-[#22C55E]" />
-               </div>
-               <p className="font-bold text-sm text-slate-600">อัปโหลดรูปภาพหลัก</p>
-               <p className="text-[10px] uppercase tracking-widest mt-2 font-bold opacity-50">PNG, JPG (Max 5MB)</p>
-            </div>
+            
+            <ProductImageUpload 
+              value={formData.mainImageUrl}
+              onChange={(url: string) => setFormData((prev) => ({ ...prev, mainImageUrl: url }))}
+            />
+
           </div>
 
           {/* Section 6: ราคา สต็อก และหมวดหมู่ */}

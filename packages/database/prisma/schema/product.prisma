@@ -16,6 +16,7 @@ model Product {
   originalPrice Float?
   stock         Int      @default(0)
   sku           String?  @unique
+  mainImageUrl  String?
   category      String   @default("Uncategorized")
   warranty      String?  @default("1 ปี")
   features      String[]

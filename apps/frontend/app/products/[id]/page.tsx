@@ -65,6 +65,7 @@ interface Product {
   includedItems?: IncludedItem[] | null;
   techSpecs?: TechSpec[] | null;
   reviews?: ProductReview[];
+  mainImageUrl?: string | null;
 }
 
 // ---- Constants ------------------------------------------------------------
@@ -73,31 +74,35 @@ const API_BASE = 'http://localhost:4000/api';
 
 // ---- Image Gallery --------------------------------------------------------
 
-function ImageGallery({ images, productName }: { images: ProductImage[]; productName: string }) {
+function ImageGallery({ images, productName, mainImageUrl }: { images: ProductImage[]; productName: string; mainImageUrl?: string | null }) {
   const [activeIndex, setActiveIndex] = useState(0);
 
-  const hasImages = images && images.length > 0;
+  // Combine mainImageUrl with relation images
+  const allImages = [];
+  if (mainImageUrl) {
+    allImages.push({ id: 'main', url: mainImageUrl, isPrimary: true });
+  }
+  if (images && images.length > 0) {
+    // Exclude duplicates or just append
+    allImages.push(...images);
+  }
 
-  // Sort: primary image first
-  const sorted = hasImages
-    ? [...images].sort((a, b) => (b.isPrimary ? 1 : 0) - (a.isPrimary ? 1 : 0))
-    : [];
-
-  const activeImage = sorted[activeIndex];
+  const hasImages = allImages.length > 0;
+  const activeImage = hasImages ? allImages[activeIndex] : null;
 
   return (
     <div className="flex flex-col gap-4">
       {/* Main image */}
-      <div className="relative aspect-square bg-gradient-to-br from-slate-50 to-emerald-50/30 rounded-[2.5rem] overflow-hidden border border-slate-100 flex items-center justify-center">
+      <div className="relative aspect-[4/3] lg:aspect-square bg-slate-50 rounded-[3rem] overflow-hidden border border-slate-100 flex items-center justify-center shadow-sm group">
         {hasImages ? (
           <img
-            src={activeImage.url}
+            src={activeImage!.url}
             alt={productName}
-            className="w-full h-full object-contain p-6 transition-all duration-300"
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
           />
         ) : (
           /* Placeholder when no images */
-          <div className="flex flex-col items-center justify-center gap-4 text-slate-300">
+          <div className="flex flex-col items-center justify-center gap-4 text-slate-300 group-hover:scale-105 transition-transform duration-500">
             <div className="relative">
               <div className="w-40 h-40 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full flex items-center justify-center shadow-inner">
                 <Leaf size={64} className="text-[#22C55E] opacity-40" />
@@ -114,26 +119,26 @@ function ImageGallery({ images, productName }: { images: ProductImage[]; product
         )}
 
         {/* Floating brand badge */}
-        <div className="absolute top-5 left-5 flex items-center gap-1.5 bg-white/90 backdrop-blur-sm border border-emerald-100 text-[#22C55E] text-[10px] font-black px-3 py-1.5 rounded-xl shadow-sm uppercase tracking-widest">
-          <Leaf size={10} />
+        <div className="absolute top-6 left-6 flex items-center gap-1.5 bg-white/90 backdrop-blur-md border border-emerald-100/50 text-[#22C55E] text-[10px] font-black px-4 py-2 rounded-xl shadow-lg uppercase tracking-widest">
+          <Leaf size={12} />
           Kbon
         </div>
       </div>
 
       {/* Thumbnail strip — only shown if multiple images */}
-      {sorted.length > 1 && (
-        <div className="flex gap-3 overflow-x-auto pb-1">
-          {sorted.map((img, i) => (
+      {allImages.length > 1 && (
+        <div className="flex gap-4 overflow-x-auto pb-2 pt-2 snap-x">
+          {allImages.map((img, i) => (
             <button
-              key={img.id}
+              key={i}
               onClick={() => setActiveIndex(i)}
-              className={`flex-shrink-0 w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all ${
+              className={`flex-shrink-0 w-24 h-24 rounded-2xl overflow-hidden border-2 transition-all transform snap-start ${
                 i === activeIndex
-                  ? 'border-[#22C55E] shadow-md shadow-green-100'
-                  : 'border-slate-100 hover:border-slate-300'
+                  ? 'border-[#22C55E] shadow-lg shadow-green-100 scale-100'
+                  : 'border-slate-100 hover:border-slate-300 scale-95 opacity-70 hover:opacity-100'
               }`}
             >
-              <img src={img.url} alt={`${productName} ${i + 1}`} className="w-full h-full object-cover" />
+              <img src={img.url} alt={`${productName} thumbnail ${i + 1}`} className="w-full h-full object-cover" />
             </button>
           ))}
         </div>
@@ -191,30 +196,32 @@ function WhatsInTheBox({ items }: { items: IncludedItem[] }) {
   if (!items || items.length === 0) return null;
 
   return (
-    <section className="bg-slate-50 py-16 px-6 mt-12 rounded-[3rem] max-w-7xl mx-auto">
-      <div className="text-center mb-12">
-        <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">What's in the box?</h2>
+    <section className="bg-slate-50 py-16 px-6 mt-12 rounded-[3.5rem] max-w-7xl mx-auto">
+      <div className="text-center mb-16">
+        <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">สิ่งที่รวมอยู่ในกล่องนี้</h2>
         <div className="w-16 h-1.5 bg-[#22C55E] rounded-full mx-auto mt-4" />
+        <p className="text-sm font-bold text-slate-400 mt-4 uppercase tracking-widest">Everything you need to grow</p>
       </div>
       
-      {/* Grid mimics the Growee layout with different sized cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
         {items.map((item, i) => (
           <div 
             key={i} 
-            className={`bg-white rounded-[2rem] p-6 shadow-sm flex flex-col items-center text-center hover:shadow-md transition-shadow ${
-              i === 0 ? 'col-span-2 row-span-2' : ''
+            className={`bg-white rounded-[2.5rem] p-8 shadow-sm flex flex-col items-center text-center hover:shadow-xl hover:shadow-[#22C55E]/5 transition-all outline outline-1 outline-slate-100 hover:outline-[#22C55E]/20 group ${
+              i === 0 ? 'col-span-1 sm:col-span-2 row-span-2' : ''
             }`}
           >
-            <h3 className={`font-black text-slate-800 ${i === 0 ? 'text-xl' : 'text-base'}`}>{item.title}</h3>
-            {item.subtitle && <p className="text-sm text-slate-400 font-medium mb-4">{item.subtitle}</p>}
             {item.imageUrl ? (
-              <img src={item.imageUrl} alt={item.title} className="w-full max-w-[200px] h-auto object-contain mt-auto" />
+              <div className={`w-full relative mb-6 rounded-3xl overflow-hidden bg-emerald-50/30 group-hover:-translate-y-2 transition-transform duration-500 ${i === 0 ? 'aspect-[4/3]' : 'aspect-square'}`}>
+                 <img src={item.imageUrl} alt={item.title} className="absolute inset-0 w-full h-full object-contain p-6 mix-blend-multiply" />
+              </div>
             ) : (
-              <div className="flex-1 w-full min-h-[100px] bg-slate-50 rounded-xl mt-4 flex items-center justify-center">
-                <Package size={32} className="text-slate-300" />
+              <div className={`w-full bg-slate-50 rounded-3xl mb-6 flex items-center justify-center group-hover:-translate-y-2 transition-transform duration-500 ${i === 0 ? 'aspect-[4/3]' : 'aspect-square'}`}>
+                <Package size={i === 0 ? 64 : 48} className="text-slate-300" />
               </div>
             )}
+            <h3 className={`font-black text-slate-800 tracking-tight ${i === 0 ? 'text-2xl mb-2' : 'text-lg mb-1'}`}>{item.title}</h3>
+            {item.subtitle && <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">{item.subtitle}</p>}
           </div>
         ))}
       </div>
@@ -453,7 +460,11 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
 
             {/* ---- Left: Image Gallery ---- */}
             <div className="w-full">
-              <ImageGallery images={product.images ?? []} productName={product.name} />
+              <ImageGallery 
+                images={product.images ?? []} 
+                productName={product.name} 
+                mainImageUrl={product.mainImageUrl} 
+              />
             </div>
 
             {/* ---- Right: Product Details (sticky on desktop) ---- */}

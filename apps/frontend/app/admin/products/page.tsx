@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
-import { Plus, Search, Edit, Trash2, Loader2, PackageX, CheckCircle2, XCircle } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Loader2, PackageX, Package, CheckCircle2, XCircle } from 'lucide-react';
 
 // ---- Type ----------------------------------------------------------------
 
@@ -154,6 +154,7 @@ export default function AdminProductsPage() {
             <thead className="bg-slate-50/50 text-slate-400 border-b border-slate-100">
               <tr>
                 <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">รหัส</th>
+                <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">รูปภาพ</th>
                 <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">ชื่อสินค้า</th>
                 <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">หมวดหมู่</th>
                 <th className="px-6 py-4 font-black uppercase tracking-widest text-[10px]">ราคา</th>
@@ -167,7 +168,7 @@ export default function AdminProductsPage() {
               {/* Loading state */}
               {isLoading && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 gap-3">
                       <Loader2 size={32} className="animate-spin text-[#22C55E]" />
                       <p className="font-bold text-sm animate-pulse">กำลังโหลดข้อมูลสินค้า...</p>
@@ -179,7 +180,7 @@ export default function AdminProductsPage() {
               {/* Error state */}
               {!isLoading && fetchError && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
                       <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center">
                         <XCircle size={28} className="text-red-400" />
@@ -200,7 +201,7 @@ export default function AdminProductsPage() {
               {/* Empty state */}
               {!isLoading && !fetchError && filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="px-6 py-20 text-center">
+                  <td colSpan={8} className="px-6 py-20 text-center">
                     <div className="flex flex-col items-center justify-center text-slate-400 gap-2">
                       <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mb-2">
                         <PackageX size={24} className="text-slate-300" />
@@ -221,14 +222,29 @@ export default function AdminProductsPage() {
                 <tr key={product.id} className="hover:bg-slate-50/70 transition-colors group">
 
                   {/* ID */}
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 align-middle">
                     <span className="font-mono text-[11px] text-slate-400 bg-slate-50 px-2 py-1 rounded-lg">
                       {product.id.slice(0, 8)}…
                     </span>
                   </td>
 
-                  {/* Name */}
+                  {/* Image */}
                   <td className="px-6 py-4">
+                    <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {(product as any).mainImageUrl ? (
+                        <img 
+                          src={(product as any).mainImageUrl} 
+                          alt={product.name} 
+                          className="w-full h-full object-cover" 
+                        />
+                      ) : (
+                        <Package size={20} className="text-slate-300" />
+                      )}
+                    </div>
+                  </td>
+
+                  {/* Name */}
+                  <td className="px-6 py-4 align-middle">
                     <p className="font-bold text-slate-800 max-w-[220px] truncate">{product.name}</p>
                     {product.sku && (
                       <p className="text-[10px] text-slate-400 font-mono mt-0.5">SKU: {product.sku}</p>

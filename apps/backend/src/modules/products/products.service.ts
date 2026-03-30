@@ -16,6 +16,7 @@ export class ProductsService {
         originalPrice: dto.originalPrice,
         stock: dto.stock ?? 0,
         sku: dto.sku,
+        mainImageUrl: dto.mainImageUrl,
         category: dto.category ?? 'Uncategorized',
         warranty: dto.warranty ?? '1 ปี',
         features: dto.features ?? [],

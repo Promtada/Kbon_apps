@@ -29,6 +29,7 @@ interface Product {
   warranty?: string | null;
   features: string[];
   isPublished: boolean;
+  mainImageUrl?: string | null;
 }
 
 // ---- Constants ------------------------------------------------------------
@@ -105,17 +106,26 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         {/* Product image placeholder */}
-        <div className="flex flex-col items-center gap-3 text-slate-300 group-hover:scale-105 transition-transform duration-500">
-          <div className="relative">
-            <div className="w-24 h-24 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full flex items-center justify-center shadow-inner">
-              <Leaf size={40} className="text-[#22C55E] opacity-60" />
+        {/* Product image placeholder or actual image */}
+        {product.mainImageUrl ? (
+          <img 
+            src={product.mainImageUrl} 
+            alt={product.name} 
+            className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" 
+          />
+        ) : (
+          <div className="flex flex-col items-center gap-3 text-slate-300 group-hover:scale-105 transition-transform duration-500">
+            <div className="relative">
+              <div className="w-24 h-24 bg-gradient-to-br from-emerald-50 to-teal-50 rounded-full flex items-center justify-center shadow-inner">
+                <Leaf size={40} className="text-[#22C55E] opacity-60" />
+              </div>
+              <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                <span className="text-[10px] font-black text-[#22C55E]">K</span>
+              </div>
             </div>
-            <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
-              <span className="text-[10px] font-black text-[#22C55E]">K</span>
-            </div>
+            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Product Image</span>
           </div>
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-300">Product Image</span>
-        </div>
+        )}
 
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity rounded-[2rem]" />
