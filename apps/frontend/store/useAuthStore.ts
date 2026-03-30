@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
+import Cookies from 'js-cookie';
 import { STORAGE_KEYS } from '../lib/storageKeys';
 
 interface User {
@@ -26,7 +27,12 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       accessToken: null,
       login: (user, token) => set({ user, isAuthenticated: !!user, accessToken: token || null }),
-      logout: () => set({ user: null, isAuthenticated: false, accessToken: null }),
+      logout: () => {
+        // Clear cookies so middleware doesn't redirect based on stale tokens
+        Cookies.remove('access_token');
+        Cookies.remove('refresh_token');
+        set({ user: null, isAuthenticated: false, accessToken: null });
+      },
     }),
     {
       name: STORAGE_KEYS.AUTH_STORAGE || 'kbon-auth-storage',

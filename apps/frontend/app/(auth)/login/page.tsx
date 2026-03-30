@@ -30,14 +30,14 @@ export default function LoginPage() {
   useEffect(() => {
     if (!isMounted) return;
 
-    // Check with store first, fallback to old localStorage if needed for legacy
-    if (isAuthenticated && authUser) {
-      if (authUser.role === 'ADMIN') {
-        router.push('/admin/dashboard');
-      } else {
-        router.push('/dashboard');
-      }
+    // Check with store first, ensuring the user object is valid and has a role (to avoid stale 'Sigma' data false-positives)
+    if (isAuthenticated && authUser && 'role' in authUser) {
+      const dest = authUser.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      window.location.href = dest;
       return;
+    } else if (isAuthenticated && (!authUser || !('role' in authUser))) {
+      // Stale or malformed data detected, purge it to prevent redirect loops.
+      useAuthStore.getState().logout();
     }
 
     const savedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL);
@@ -78,8 +78,9 @@ export default function LoginPage() {
       Cookies.set('access_token', accessToken, cookieOptions);
       Cookies.set('refresh_token', refreshToken, cookieOptions);
 
-      // 🌟 2. แยกทางไปตาม Role หลัง Login สำเร็จ
-      router.push(user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
+      // 🌟 2. แยกทางไปตาม Role หลัง Login สำเร็จ (hard redirect เพื่อให้ cookie ถูก set ก่อน middleware เช็ค)
+      const destination = user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      window.location.href = destination;
 
     } catch (err: any) {
       setError(err.response?.data?.message || 'อีเมลหรือรหัสผ่านไม่ถูกต้อง');
