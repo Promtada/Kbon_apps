@@ -1,12 +1,23 @@
 {
   "name": "kbon-platform",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Kbon Platform Monorepo",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "pnpm -r --parallel dev",
+    "build": "pnpm -r build",
+    "start": "pnpm -r --parallel start",
+    "lint": "pnpm -r lint",
+    "db:push": "cd packages/database && npx prisma db push",
+    "db:generate": "cd packages/database && npx prisma generate",
+    "db:studio": "cd packages/database && npx prisma studio"
   },
-  "keywords": [],
+  "keywords": [
+    "hydroponics",
+    "kbon",
+    "ecommerce",
+    "monorepo"
+  ],
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.29.3",

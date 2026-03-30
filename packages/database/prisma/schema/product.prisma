@@ -1,25 +1,25 @@
+// The Category model is kept for potential future relational use
 model Category {
   id          String  @id @default(cuid())
   name        String
   description String?
-
-  products Product[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model Product {
-  id          String  @id @default(cuid())
-  name        String
-  description String  @db.Text
-  price       Float
-  stock       Int     @default(0)
-  sku         String? @unique
-  isPublished Boolean @default(false)
-
-  categoryId String
-  category   Category @relation(fields: [categoryId], references: [id])
+  id            String   @id @default(cuid())
+  name          String
+  description   String   @db.Text
+  price         Float
+  originalPrice Float?
+  stock         Int      @default(0)
+  sku           String?  @unique
+  category      String   @default("Uncategorized")
+  warranty      String?  @default("1 ปี")
+  features      String[]
+  isPublished   Boolean  @default(false)
 
   images  ProductImage[]
   reviews Review[] // เชื่อมกับตารางรีวิว
@@ -30,8 +30,6 @@ model Product {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-  @@index([categoryId])
 }
 
 model ProductImage {

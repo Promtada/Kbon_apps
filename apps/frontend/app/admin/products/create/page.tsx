@@ -42,14 +42,49 @@ export default function CreateProductPage() {
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
-    
-    setTimeout(() => {
-      alert('บันทึกข้อมูลสินค้าเรียบร้อยแล้ว!');
+
+    // Build the payload — convert string inputs to Numbers and filter empty features
+    const payload = {
+      name: formData.name,
+      description: formData.description,
+      price: Number(formData.price),
+      originalPrice: formData.originalPrice !== '' ? Number(formData.originalPrice) : undefined,
+      stock: Number(formData.stock),
+      category: formData.category,
+      warranty: formData.warranty,
+      isPublished: formData.isPublished,
+      features: features.filter((f) => f.trim() !== ''),
+    };
+
+    try {
+      const res = await fetch('http://localhost:4000/api/products', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        // Try to extract a meaningful error message from the response body
+        const errorData = await res.json().catch(() => null);
+        const message = errorData?.message
+          ? Array.isArray(errorData.message)
+            ? errorData.message.join('\n')
+            : errorData.message
+          : `เกิดข้อผิดพลาด (${res.status})`;
+        throw new Error(message);
+      }
+
+      alert('บันทึกข้อมูลสินค้าเรียบร้อยแล้ว! ✅');
       router.push('/admin/products');
-    }, 1000);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'เกิดข้อผิดพลาดที่ไม่ทราบสาเหตุ';
+      alert(`ไม่สามารถบันทึกข้อมูลได้:\n${message}`);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
