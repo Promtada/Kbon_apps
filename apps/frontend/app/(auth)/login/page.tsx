@@ -32,7 +32,7 @@ export default function LoginPage() {
 
     // Check with store first, ensuring the user object is valid and has a role (to avoid stale 'Sigma' data false-positives)
     if (isAuthenticated && authUser && 'role' in authUser) {
-      const dest = authUser.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      const dest = authUser.role === 'ADMIN' ? '/admin/dashboard' : '/account';
       window.location.href = dest;
       return;
     } else if (isAuthenticated && (!authUser || !('role' in authUser))) {
@@ -79,7 +79,7 @@ export default function LoginPage() {
       Cookies.set('refresh_token', refreshToken, cookieOptions);
 
       // 🌟 2. แยกทางไปตาม Role หลัง Login สำเร็จ (hard redirect เพื่อให้ cookie ถูก set ก่อน middleware เช็ค)
-      const destination = user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+      const destination = user.role === 'ADMIN' ? '/admin/dashboard' : '/account';
       window.location.href = destination;
 
     } catch (err: any) {

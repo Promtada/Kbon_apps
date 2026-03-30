@@ -6,7 +6,7 @@ export function middleware(request: NextRequest) {
   const path = request.nextUrl.pathname;
 
   // ถ้า "ไม่มี token" แต่อยากเข้าหน้าที่ต้องล็อกอิน -> เตะกลับไปหน้า "/login"
-  if (!token && (path.startsWith('/dashboard') || path.startsWith('/admin'))) {
+  if (!token && (path.startsWith('/account') || path.startsWith('/admin'))) {
     return NextResponse.redirect(new URL('/login', request.url));
   }
 
@@ -15,6 +15,6 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/dashboard/:path*', '/admin/:path*'],
+  matcher: ['/account/:path*', '/admin/:path*'],
 };
 

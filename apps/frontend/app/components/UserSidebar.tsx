@@ -4,10 +4,8 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Package, MapPin, Settings, LogOut } from 'lucide-react';
-import Cookies from 'js-cookie';
 import { useCart } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
-import { STORAGE_KEYS } from '../../lib/storageKeys';
 
 export default function UserSidebar() {
   const pathname = usePathname();
@@ -15,26 +13,30 @@ export default function UserSidebar() {
   const { clearCart } = useCart();
 
   const links = [
-    { name: 'ภาพรวมฟาร์ม', href: '/dashboard', icon: <LayoutDashboard size={20} /> },
-    { name: 'ประวัติการสั่งซื้อ', href: '/dashboard/orders', icon: <Package size={20} /> },
-    { name: 'สมุดที่อยู่', href: '/dashboard/addresses', icon: <MapPin size={20} /> },
-    { name: 'ตั้งค่าบัญชี', href: '/dashboard/settings', icon: <Settings size={20} /> },
+    { name: 'ภาพรวมฟาร์ม', href: '/account', icon: <LayoutDashboard size={20} /> },
+    { name: 'ประวัติการสั่งซื้อ', href: '/account/orders', icon: <Package size={20} /> },
+    { name: 'สมุดที่อยู่', href: '/account/addresses', icon: <MapPin size={20} /> },
+    { name: 'ตั้งค่าบัญชี', href: '/account/settings', icon: <Settings size={20} /> },
   ];
 
-  const handleLogout = () => {
-    // 1. Clear Zustand Auth & Cart stores
+  const handleLogout = async () => {
+    // 1. Clear Zustand stores
     useAuthStore.getState().logout();
     clearCart();
 
-    // 2. Nuke auth cookies
-    Cookies.remove('access_token');
-    Cookies.remove('refresh_token');
-
-    // 3. FORCE CLEAR: Nuke ALL localStorage to catch rogue sigma_ keys
+    // 2. Nuke ALL storage
     localStorage.clear();
+    sessionStorage.clear();
 
-    // 4. Redirect safely
-    router.replace('/login');
+    // 3. Nuke ALL cookies as a failsafe
+    document.cookie.split(';').forEach((c) => {
+      document.cookie = c
+        .replace(/^ +/, '')
+        .replace(/=.*/, '=;expires=' + new Date().toUTCString() + ';path=/');
+    });
+
+    // 4. FORCE HARD RELOAD to login (destroys bfcache — no zombie sessions)
+    window.location.href = '/login';
   };
 
   return (

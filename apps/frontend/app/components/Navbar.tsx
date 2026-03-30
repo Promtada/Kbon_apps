@@ -45,7 +45,7 @@ export default function Navbar({ user }: { user?: any }) {
     { name: 'ติดต่อเรา', href: '/contact' },
   ];
 
-  const profilePath = activeUser?.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard';
+  const profilePath = activeUser?.role === 'ADMIN' ? '/admin/dashboard' : '/account';
 
   return (
     <header className="sticky top-0 z-50 w-full bg-white border-b border-slate-100 shadow-sm">
