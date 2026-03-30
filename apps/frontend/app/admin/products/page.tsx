@@ -67,6 +67,32 @@ export default function AdminProductsPage() {
     }
   };
 
+  // ---------- Status toggle (optimistic) ----------
+  const handleToggleStatus = async (product: Product) => {
+    const newStatus = !product.isPublished;
+
+    // Flip locally first for instant feedback
+    setProducts((prev) =>
+      prev.map((p) => (p.id === product.id ? { ...p, isPublished: newStatus } : p)),
+    );
+
+    try {
+      const res = await fetch(`${API_BASE}/products/${product.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isPublished: newStatus }),
+      });
+      if (!res.ok) throw new Error(`Server responded with ${res.status}`);
+    } catch (error) {
+      // Revert on failure
+      console.error('Failed to toggle status:', error);
+      setProducts((prev) =>
+        prev.map((p) => (p.id === product.id ? { ...p, isPublished: product.isPublished } : p)),
+      );
+      alert('ไม่สามารถเปลี่ยนสถานะได้ กรุณาลองใหม่อีกครั้ง');
+    }
+  };
+
   // ---------- Filter ----------
   const filteredProducts = products.filter(
     (p) =>
@@ -243,17 +269,21 @@ export default function AdminProductsPage() {
                     </span>
                   </td>
 
-                  {/* Status */}
+                  {/* Status — clickable toggle */}
                   <td className="px-6 py-4 text-center">
-                    {product.isPublished ? (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-600 bg-emerald-50 px-3 py-1 rounded-full">
-                        <CheckCircle2 size={12} /> แสดงผล
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-slate-400 bg-slate-100 px-3 py-1 rounded-full">
-                        <XCircle size={12} /> ซ่อนไว้
-                      </span>
-                    )}
+                    <button
+                      onClick={() => handleToggleStatus(product)}
+                      title="คลิกเพื่อเปลี่ยนสถานะ"
+                      className={`inline-flex items-center gap-1.5 text-[11px] font-bold px-3 py-1 rounded-full transition-all hover:scale-105 active:scale-95 ${
+                        product.isPublished
+                          ? 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'
+                          : 'text-slate-400 bg-slate-100 hover:bg-slate-200'
+                      }`}
+                    >
+                      {product.isPublished
+                        ? <><CheckCircle2 size={12} /> แสดงผล</>
+                        : <><XCircle size={12} /> ซ่อนไว้</>}
+                    </button>
                   </td>
 
                   {/* Actions */}
