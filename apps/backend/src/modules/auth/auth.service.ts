@@ -10,6 +10,7 @@ import { JwtService } from '@nestjs/jwt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 
 @Injectable()
 export class AuthService {
@@ -137,6 +138,24 @@ export class AuthService {
       data: updateAuthDto,
       select: { id: true, email: true, name: true, role: true },
     });
+  }
+
+  // --- 🌟 อัปเดตโปรไฟล์ของ User ที่ล็อกอินอยู่ ---
+  async updateProfile(userId: string, dto: UpdateProfileDto) {
+    await this.findOne(userId);
+
+    const data: any = {};
+    if (dto.name !== undefined) data.name = dto.name;
+    if (dto.phone !== undefined) data.phone = dto.phone;
+    if (dto.dob !== undefined) data.dob = new Date(dto.dob);
+
+    const user = await this.prisma.user.update({
+      where: { id: userId },
+      data,
+    });
+
+    const { password, ...result } = user;
+    return result;
   }
 
   async remove(id: string) {

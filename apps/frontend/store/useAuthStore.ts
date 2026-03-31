@@ -17,6 +17,7 @@ interface AuthState {
   isAuthenticated: boolean;
   accessToken: string | null;
   login: (userData: User, token?: string) => void;
+  updateUser: (data: Partial<User>) => void;
   logout: () => void;
 }
 
@@ -27,6 +28,9 @@ export const useAuthStore = create<AuthState>()(
       isAuthenticated: false,
       accessToken: null,
       login: (user, token) => set({ user, isAuthenticated: !!user, accessToken: token || null }),
+      updateUser: (data) => set((state) => ({
+        user: state.user ? { ...state.user, ...data } : null,
+      })),
       logout: () => {
         // Clear cookies so middleware doesn't redirect based on stale tokens
         Cookies.remove('access_token');

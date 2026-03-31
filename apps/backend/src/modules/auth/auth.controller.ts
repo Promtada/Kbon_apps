@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } fro
 import { AuthService } from './auth.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
+import { UpdateProfileDto } from './dto/update-profile.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard'; 
 
 @Controller('auth')
@@ -28,6 +29,13 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   getProfile(@Req() req) {
     return req.user;
+  }
+
+  // --- 🌟 ใหม่: อัปเดตโปรไฟล์ของตัวเอง ---
+  @Patch('me/profile')
+  @UseGuards(JwtAuthGuard)
+  async updateProfile(@Req() req, @Body() dto: UpdateProfileDto) {
+    return this.authService.updateProfile(req.user.id, dto);
   }
 
   @Get()

@@ -10,6 +10,7 @@ model User {
   name     String
   avatarUrl String? // รูปโปรไฟล์
   phone    String?
+  dob      DateTime?
   role     Role    @default(USER)
 
   // Relations (ความสัมพันธ์กับตารางอื่น)
