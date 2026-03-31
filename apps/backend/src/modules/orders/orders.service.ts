@@ -1,6 +1,7 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
 
 @Injectable()
 export class OrdersService {
@@ -43,6 +44,66 @@ export class OrdersService {
             name: true,
             email: true,
             phone: true,
+            avatarUrl: true,
+          },
+        },
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                mainImageUrl: true,
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+
+  // --- 🌟 ดึงคำสั่งซื้อของผู้ใช้ที่ล็อกอินอยู่ ---
+  async findMyOrders(userId: string) {
+    return this.prisma.order.findMany({
+      where: { userId },
+      include: {
+        items: {
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                mainImageUrl: true,
+              },
+            },
+          },
+        },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  // --- 🌟 Admin: อัปเดตสถานะคำสั่งซื้อ ---
+  async updateOrderStatus(id: string, dto: UpdateOrderStatusDto) {
+    const existing = await this.prisma.order.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`ไม่พบคำสั่งซื้อ ${id}`);
+    }
+
+    const updateData: any = {};
+    if (dto.status) updateData.status = dto.status;
+    if (dto.paymentStatus) updateData.paymentStatus = dto.paymentStatus;
+    if (dto.trackingNumber !== undefined) updateData.trackingNumber = dto.trackingNumber;
+
+    return this.prisma.order.update({
+      where: { id },
+      data: updateData,
+      include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
             avatarUrl: true,
           },
         },
