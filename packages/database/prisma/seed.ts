@@ -488,6 +488,18 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.product.deleteMany();
 
+  console.log('👑 Seeding Admin Account...');
+  await prisma.user.upsert({
+    where: { email: 'admin@kbon.com' },
+    update: {},
+    create: {
+      email: 'admin@kbon.com',
+      name: 'Admin Kbon',
+      password: '$2a$10$vI8aWBnW3fID.ZQ4/zo1G.q1lRps.9cGLcZEiGDMVr5yUP1KUOYTa', // 12345678
+      role: 'ADMIN',
+    },
+  });
+
   console.log('✨ Seeding 20 premium mock hydroponics products...');
   const createdProducts = [];
   for (const productData of mockProducts) {
