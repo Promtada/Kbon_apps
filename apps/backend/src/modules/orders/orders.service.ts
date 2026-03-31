@@ -1,11 +1,22 @@
-import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import Stripe from 'stripe';
 
 @Injectable()
 export class OrdersService {
-  constructor(private prisma: PrismaService) {}
+  private stripe: Stripe;
+
+  constructor(
+    private prisma: PrismaService,
+    private configService: ConfigService,
+  ) {
+    this.stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || '', {
+      apiVersion: '2025-01-27.acacia' as any,
+    });
+  }
 
   async findAll() {
     return this.prisma.order.findMany({
@@ -210,5 +221,127 @@ export class OrdersService {
 
       return order;
     });
+  }
+  // --- 🌟 เริ่มกระบวนการชำระเงินด้วย Stripe ---
+  async createStripeSession(orderId: string, userId: string) {
+    const order = await this.prisma.order.findUnique({
+      where: { id: orderId },
+      include: { items: { include: { product: true } } },
+    });
+
+    if (!order) {
+      throw new NotFoundException(`ไม่พบคำสั่งซื้อ ${orderId}`);
+    }
+
+    if (order.userId !== userId) {
+      throw new BadRequestException('คุณไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้');
+    }
+
+    if (order.paymentStatus === 'PAID') {
+      throw new BadRequestException('คำสั่งซื้อนี้ชำระเงินเรียบร้อยแล้ว');
+    }
+
+    // แปลงสินค้าเป็นรูปแบบที่ Stripe ต้องการ (หน่วยเป็นสตางค์)
+    const lineItems = order.items.map((item) => {
+      return {
+        price_data: {
+          currency: 'thb',
+          product_data: {
+            name: item.product.name,
+            images: item.product.mainImageUrl ? [item.product.mainImageUrl] : [],
+          },
+          unit_amount: Math.round(item.priceAtPurchase * 100),
+        },
+        quantity: item.quantity,
+      };
+    });
+
+    // เพิ่มค่าจัดส่งเข้าไปด้วย (ถ้ามี)
+    const subtotal = order.items.reduce((sum, item) => sum + item.priceAtPurchase * item.quantity, 0);
+    const shippingFee = order.totalAmount - subtotal;
+    if (shippingFee > 0) {
+      lineItems.push({
+        price_data: {
+          currency: 'thb',
+          product_data: {
+            name: 'ค่าจัดส่ง (Shipping Fee)',
+            images: [],
+          },
+          unit_amount: Math.round(shippingFee * 100),
+        },
+        quantity: 1,
+      });
+    }
+
+    try {
+      const session = await this.stripe.checkout.sessions.create({
+        payment_method_types: ['card', 'promptpay'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+        cancel_url: `http://localhost:3000/account/orders`,
+        metadata: {
+          orderId: order.id,
+        },
+      });
+
+      // บันทึก Stripe Session ID ลงไปใน Order
+      await this.prisma.order.update({
+        where: { id: order.id },
+        data: { stripeSessionId: session.id },
+      });
+
+      return { url: session.url };
+    } catch (error) {
+      console.error('Stripe session creation failed:', error);
+      throw new InternalServerErrorException('ไม่สามารถสร้างเซสชันการชำระเงินได้');
+    }
+  }
+
+  // --- 🌟 จัดการ Webhook จาก Stripe เมื่อลูกค้าจ่ายเงินเสร็จ ---
+  async handleStripeWebhook(signature: string, payload: Buffer) {
+    let event: Stripe.Event;
+    const webhookSecret = this.configService.get<string>('STRIPE_WEBHOOK_SECRET');
+
+    if (!webhookSecret) {
+      throw new InternalServerErrorException('STRIPE_WEBHOOK_SECRET is not configured');
+    }
+
+    try {
+      // ✅ ตรวจสอบลายเซ็น (Signature) ว่ามาจาก Stripe จริงหรือไม่
+      event = this.stripe.webhooks.constructEvent(payload, signature, webhookSecret);
+    } catch (err: any) {
+      console.error(`⚠️ Webhook signature verification failed:`, err.message);
+      throw new BadRequestException(`Webhook Error: ${err.message}`);
+    }
+
+    // จัดการเฉพาะเหตุการณ์ที่ชำระเงินสำเร็จ
+    if (event.type === 'checkout.session.completed') {
+      const session = event.data.object as Stripe.Checkout.Session;
+      
+      // อัปเดตสถานะคำสั่งซื้อจาก UNPAID เป็น PAID
+      try {
+        const order = await this.prisma.order.findUnique({
+          where: { stripeSessionId: session.id },
+        });
+
+        if (order) {
+          await this.prisma.order.update({
+            where: { id: order.id },
+            data: { 
+              paymentStatus: 'PAID',
+              paymentMethod: 'Stripe', // บันทึกไว้ว่าจ่ายผ่านอะไร
+              status: order.status === 'PENDING' ? 'PAID' : order.status, // อัปเดตสถานะจัดส่งเบื้องต้น
+            },
+          });
+          console.log(`✅ Order ${order.id} payment status updated to PAID via Webhook.`);
+        }
+      } catch (err) {
+        console.error('Failed to update order status internally', err);
+      }
+    }
+
+    // ตอบกลับ 200 OK ให้ Stripe รู้ว่ารับข้อมูลแล้ว (ถ้าไม่ตอบ Stripe จะส่งมาซ้ำ)
+    return { received: true };
   }
 }

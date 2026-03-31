@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseGuards, Req } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Body, Param, NotFoundException, UseGuards, Req, Headers } from '@nestjs/common';
+import type { Request } from 'express';
 import { OrdersService } from './orders.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
@@ -9,6 +10,23 @@ import { Roles } from '../auth/decorators/roles.decorator';
 @Controller('orders')
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
+
+  // --- 🌟 Webhook: รับข้อมูลจาก Stripe ---
+  // ต้องเป็น Public (เอา Auth Guard ออก) เพื่อให้ Stripe ส่งข้อมูลมาได้
+  @Post('webhook')
+  async stripeWebhook(@Headers('stripe-signature') signature: string, @Req() req: any) {
+    if (!signature) {
+      throw new NotFoundException('Missing signature');
+    }
+    return this.ordersService.handleStripeWebhook(signature, req.rawBody);
+  }
+
+  // --- 🌟 สร้าง Stripe Session สำหรับคำสั่งซื้อ ---
+  @Post(':id/create-stripe-session')
+  @UseGuards(JwtAuthGuard)
+  async createStripeSession(@Param('id') id: string, @Req() req) {
+    return this.ordersService.createStripeSession(id, req.user.id);
+  }
 
   @Get()
   async findAll() {

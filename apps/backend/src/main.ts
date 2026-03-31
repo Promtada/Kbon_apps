@@ -6,7 +6,9 @@ import * as fs from 'fs';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    rawBody: true, // 🌟 สำคัญมากสำหรับ Stripe Webhook (ต้องการ Raw Body ไปใช้คำนวณ Signature)
+  });
 
   // 0. ให้บริการไฟล์ Static (รูปภาพ/วิดีโอ) ที่อัปโหลดมา
   const uploadsPath = join(process.cwd(), 'uploads');

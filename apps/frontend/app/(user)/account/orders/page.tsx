@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 import api from '../../../../lib/axios';
+import { toast } from 'sonner';
 import {
   Package, ShoppingBag, ArrowRight, Loader2, Clock,
   CheckCircle2, Truck, XCircle, CreditCard, Leaf, ChevronDown, ChevronUp,
@@ -220,8 +221,28 @@ function PageHeader({ count, loading }: { count: number; loading?: boolean }) {
 // ─── Order Card ───
 function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
   const status = getStatusConfig(order.status);
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
+
+  // ─── Pay Now Logic ───
+  const handlePayment = async () => {
+    setIsPaying(true);
+    toast.promise(
+      api.post(`/orders/${order.id}/create-stripe-session`),
+      {
+        loading: 'กำลังเชื่อมต่อระบบชำระเงิน...',
+        success: (stripeRes) => {
+          window.location.href = stripeRes.data.url;
+          return 'พาคุณไปหน้าชำระเงิน...';
+        },
+        error: () => {
+          setIsPaying(false);
+          return 'ไม่สามารถเชื่อมต่อระบบชำระเงินได้ ลองใหม่อีกครั้ง';
+        },
+      }
+    );
+  };
 
   // Parse shipping address
   let shippingAddress: any = {};
@@ -298,15 +319,31 @@ function OrderCard({ order }: { order: Order }) {
           <p className="text-xs text-slate-400 font-medium flex-1 truncate">
             {order.items.map((i) => i.product.name).join(', ')}
           </p>
+          <div className="flex items-center gap-4 flex-shrink-0">
+            {/* Pay Now Button (if UNPAID) */}
+            {order.paymentStatus === 'UNPAID' && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handlePayment();
+                }}
+                disabled={isPaying}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#22C55E] hover:bg-[#1eb054] text-white text-xs font-black rounded-xl shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+              >
+                {isPaying ? <Loader2 size={14} className="animate-spin" /> : <CreditCard size={14} />}
+                ชำระเงิน
+              </button>
+            )}
 
-          {/* Expand/collapse toggle */}
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="flex items-center gap-1 text-xs font-bold text-[#22C55E] hover:text-[#1eb054] transition-colors flex-shrink-0"
-          >
-            {expanded ? 'ซ่อน' : 'ดูรายละเอียด'}
-            {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
+            {/* Expand/collapse toggle */}
+            <button
+              onClick={() => setExpanded(!expanded)}
+              className="flex items-center gap-1 text-xs font-bold text-[#22C55E] hover:text-[#1eb054] transition-colors"
+            >
+              {expanded ? 'ซ่อน' : 'ดูรายละเอียด'}
+              {expanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            </button>
+          </div>
         </div>
       </div>
 

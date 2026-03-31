@@ -1,21 +1,17 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
 import {
   ShoppingCart, Search, ChevronRight, User as UserIcon,
   Loader2, AlertTriangle, Package, Truck, CheckCircle2,
-  RefreshCw, XCircle, DollarSign, X, Save, Leaf, MapPin,
+  RefreshCw, XCircle, DollarSign,
 } from 'lucide-react';
-import { toast } from 'sonner';
 import api from '../../../lib/axios';
 
 // ─── Types ───
 interface OrderItem {
-  id: string;
-  quantity: number;
-  priceAtPurchase: number;
   product: {
-    id: string;
     name: string;
     mainImageUrl: string | null;
   };
@@ -26,13 +22,8 @@ interface Order {
   totalAmount: number;
   status: string;
   paymentStatus: string;
-  paymentMethod: string | null;
-  trackingNumber: string | null;
-  shippingAddressSnapshot: string;
   createdAt: string;
-  updatedAt: string;
   user: {
-    id: string;
     name: string;
     email: string;
     avatarUrl: string | null;
@@ -41,9 +32,6 @@ interface Order {
 }
 
 // ─── Status configs ───
-const ORDER_STATUSES = ['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'] as const;
-const PAYMENT_STATUSES = ['UNPAID', 'PAID', 'REFUNDED'] as const;
-
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-amber-50 text-amber-600 border-amber-200',
   PAID: 'bg-blue-50 text-blue-600 border-blue-200',
@@ -83,7 +71,6 @@ export default function AdminOrdersPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const fetchOrders = useCallback(async () => {
     setIsLoading(true);
@@ -109,13 +96,6 @@ export default function AdminOrdersPage() {
       o.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       o.user.email.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-  const handleOrderUpdated = (updatedOrder: Order) => {
-    setOrders((prev) =>
-      prev.map((o) => (o.id === updatedOrder.id ? updatedOrder : o))
-    );
-    setSelectedOrder(null);
-  };
 
   return (
     <div className="space-y-6">
@@ -224,12 +204,12 @@ export default function AdminOrdersPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right text-xs">
-                        <button
-                          onClick={() => setSelectedOrder(order)}
+                        <Link
+                          href={`/admin/orders/${order.id}`}
                           className="inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-200 text-slate-600 rounded-xl font-bold hover:bg-[#22C55E] hover:border-[#22C55E] hover:text-white transition-all shadow-sm group-hover:shadow-md"
                         >
                           ดูรายละเอียด <ChevronRight size={14} />
-                        </button>
+                        </Link>
                       </td>
                     </tr>
                   ))
@@ -239,267 +219,6 @@ export default function AdminOrdersPage() {
           </div>
         )}
       </div>
-
-      {/* ─── Order Detail Modal ─── */}
-      {selectedOrder && (
-        <OrderDetailModal
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-          onUpdated={handleOrderUpdated}
-        />
-      )}
     </div>
-  );
-}
-
-// ═══════════════════════════════════════════════════
-// ─── Order Detail Modal ───
-// ═══════════════════════════════════════════════════
-function OrderDetailModal({
-  order,
-  onClose,
-  onUpdated,
-}: {
-  order: Order;
-  onClose: () => void;
-  onUpdated: (order: Order) => void;
-}) {
-  const [status, setStatus] = useState(order.status);
-  const [paymentStatus, setPaymentStatus] = useState(order.paymentStatus);
-  const [trackingNumber, setTrackingNumber] = useState(order.trackingNumber || '');
-  const [isSaving, setIsSaving] = useState(false);
-
-  // Determine if anything changed
-  const hasChanges =
-    status !== order.status ||
-    paymentStatus !== order.paymentStatus ||
-    trackingNumber !== (order.trackingNumber || '');
-
-  // Parse address
-  let address: any = {};
-  try {
-    address = JSON.parse(order.shippingAddressSnapshot);
-  } catch {}
-
-  // Close on Escape
-  useEffect(() => {
-    const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', handleKey);
-    document.body.style.overflow = 'hidden';
-    return () => {
-      window.removeEventListener('keydown', handleKey);
-      document.body.style.overflow = '';
-    };
-  }, [onClose]);
-
-  const handleSave = async () => {
-    setIsSaving(true);
-    try {
-      const res = await api.patch(`/orders/${order.id}/status`, {
-        status,
-        paymentStatus,
-        trackingNumber: trackingNumber || null,
-      });
-
-      if (res.data.success) {
-        toast.success('อัปเดตสำเร็จ!', {
-          description: `คำสั่งซื้อ #${order.id.slice(-8).toUpperCase()} อัปเดตแล้ว`,
-        });
-        onUpdated(res.data.order);
-      }
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || 'ไม่สามารถอัปเดตสถานะได้';
-      toast.error('เกิดข้อผิดพลาด', { description: Array.isArray(msg) ? msg[0] : msg });
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
-  return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm"
-      />
-
-      {/* Modal */}
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 md:p-8">
-        <div
-          className="bg-white rounded-[2rem] w-full max-w-3xl max-h-[90vh] overflow-y-auto shadow-2xl border border-slate-100 animate-[fadeIn_0.2s_ease]"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* ─── Modal Header ─── */}
-          <div className="sticky top-0 z-10 bg-white border-b border-slate-100 px-6 md:px-8 py-5 flex items-center justify-between rounded-t-[2rem]">
-            <div className="flex items-center gap-3">
-              <div className="w-11 h-11 bg-gradient-to-br from-emerald-50 to-green-50 rounded-xl flex items-center justify-center">
-                <Package size={20} className="text-[#22C55E]" />
-              </div>
-              <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  #{order.id.slice(-8).toUpperCase()}
-                </h2>
-                <p className="text-xs text-slate-400 font-medium">
-                  {new Date(order.createdAt).toLocaleDateString('th-TH', {
-                    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit',
-                  })}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-9 h-9 rounded-xl bg-slate-100 hover:bg-slate-200 flex items-center justify-center transition-colors"
-            >
-              <X size={18} className="text-slate-500" />
-            </button>
-          </div>
-
-          <div className="px-6 md:px-8 py-6 space-y-6">
-            {/* ─── Customer Info ─── */}
-            <div className="flex items-center gap-4 bg-slate-50 rounded-2xl p-4">
-              <div className="w-12 h-12 rounded-full bg-emerald-50 flex items-center justify-center border border-emerald-100 flex-shrink-0 overflow-hidden">
-                {order.user.avatarUrl ? (
-                  <img src={order.user.avatarUrl} alt={order.user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <UserIcon size={20} className="text-[#22C55E]" />
-                )}
-              </div>
-              <div>
-                <p className="font-black text-slate-800">{order.user.name}</p>
-                <p className="text-xs text-slate-400 font-medium">{order.user.email}</p>
-              </div>
-              <div className="ml-auto text-right">
-                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ยอดรวม</p>
-                <p className="text-xl font-black text-[#22C55E]">฿{order.totalAmount.toLocaleString('th-TH')}</p>
-              </div>
-            </div>
-
-            {/* ─── Shipping Address ─── */}
-            {address.fullName && (
-              <div>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2 flex items-center gap-1.5">
-                  <MapPin size={12} /> ที่อยู่จัดส่ง
-                </p>
-                <div className="bg-slate-50 rounded-xl p-4 text-sm font-medium text-slate-600 leading-relaxed">
-                  <p className="font-bold text-slate-800">{address.fullName} · {address.phone}</p>
-                  <p>{address.addressLine}</p>
-                  <p>{address.province} {address.postalCode}</p>
-                </div>
-              </div>
-            )}
-
-            {/* ─── Items ─── */}
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3">
-                รายการสินค้า ({order.items.length})
-              </p>
-              <div className="space-y-2">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex items-center gap-4 bg-slate-50 rounded-xl p-3">
-                    <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 overflow-hidden flex items-center justify-center flex-shrink-0">
-                      {item.product.mainImageUrl ? (
-                        <img src={item.product.mainImageUrl} alt={item.product.name} className="w-full h-full object-cover" />
-                      ) : (
-                        <Leaf size={14} className="text-[#22C55E] opacity-40" />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-slate-800 truncate">{item.product.name}</p>
-                      <p className="text-xs text-slate-400">฿{item.priceAtPurchase.toLocaleString('th-TH')} × {item.quantity}</p>
-                    </div>
-                    <p className="text-sm font-black text-slate-700">
-                      ฿{(item.priceAtPurchase * item.quantity).toLocaleString('th-TH')}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ─── Admin Controls ─── */}
-            <div className="border-t border-slate-100 pt-6 space-y-5">
-              <p className="text-[10px] font-black text-[#22C55E] uppercase tracking-widest">
-                ⚙️ จัดการสถานะคำสั่งซื้อ
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                {/* Order Status */}
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
-                    สถานะคำสั่งซื้อ
-                  </label>
-                  <select
-                    value={status}
-                    onChange={(e) => setStatus(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#22C55E]/20 focus:border-[#22C55E] transition-all appearance-none cursor-pointer"
-                  >
-                    {ORDER_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {STATUS_LABELS[s] || s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                {/* Payment Status */}
-                <div>
-                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
-                    สถานะการชำระเงิน
-                  </label>
-                  <select
-                    value={paymentStatus}
-                    onChange={(e) => setPaymentStatus(e.target.value)}
-                    className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#22C55E]/20 focus:border-[#22C55E] transition-all appearance-none cursor-pointer"
-                  >
-                    {PAYMENT_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {PAYMENT_LABELS[s] || s}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
-              {/* Tracking Number */}
-              <div>
-                <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">
-                  เลขพัสดุ (Tracking Number)
-                </label>
-                <input
-                  type="text"
-                  value={trackingNumber}
-                  onChange={(e) => setTrackingNumber(e.target.value)}
-                  placeholder="เช่น TH1234567890"
-                  className="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-bold text-slate-700 focus:outline-none focus:ring-4 focus:ring-[#22C55E]/20 focus:border-[#22C55E] transition-all placeholder:text-slate-300"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* ─── Modal Footer ─── */}
-          <div className="sticky bottom-0 bg-white border-t border-slate-100 px-6 md:px-8 py-4 flex items-center justify-between gap-4 rounded-b-[2rem]">
-            <button
-              onClick={onClose}
-              className="px-6 py-3 text-slate-500 font-bold text-sm hover:text-slate-800 transition-colors"
-            >
-              ยกเลิก
-            </button>
-
-            <button
-              onClick={handleSave}
-              disabled={isSaving || !hasChanges}
-              className="px-8 py-3 bg-[#22C55E] hover:bg-[#1eb054] disabled:bg-slate-200 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-black text-sm rounded-2xl shadow-lg shadow-green-200 transition-all flex items-center gap-2 active:scale-[0.98]"
-            >
-              {isSaving ? (
-                <><Loader2 size={16} className="animate-spin" /> กำลังบันทึก...</>
-              ) : (
-                <><Save size={16} /> บันทึกการเปลี่ยนแปลง</>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
   );
 }

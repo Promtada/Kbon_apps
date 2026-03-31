@@ -185,14 +185,30 @@ export default function CheckoutPage() {
     };
 
     try {
+      // 1. สร้างคำสั่งซื้อในระบบเรา
       const res = await api.post('/orders/checkout', payload);
 
       if (res.data.success) {
         clearCart();
-        toast.success('สั่งซื้อสำเร็จ!', {
-          description: `หมายเลขคำสั่งซื้อ: ${res.data.orderId}`,
-        });
-        router.push('/checkout/success');
+        
+        // 2. แจ้งเตือนว่ากำลังเชื่อมต่อระบบชำระเงิน
+        toast.promise(
+          api.post(`/orders/${res.data.orderId}/create-stripe-session`),
+          {
+            loading: 'กำลังเชื่อมต่อระบบชำระเงิน...',
+            success: (stripeRes) => {
+              // 3. Redirect ไปยังหน้าชำระเงินของ Stripe สำเร็จ
+              window.location.href = stripeRes.data.url;
+              return 'พาคุณไปหน้าชำระเงิน...';
+            },
+            error: () => {
+              // หากเชื่อมต่อ Stripe ไม่สำเร็จ ให้ไปที่หน้าประวัติคำสั่งซื้อ
+              router.push('/account/orders');
+              return 'ไม่สามารถเชื่อมต่อระบบชำระเงินได้ กรุณาชำระเงินภายหลังในหน้าคำสั่งซื้อ';
+            },
+          }
+        );
+
       } else {
         toast.error('เกิดข้อผิดพลาด', { description: res.data.error });
         setIsSubmitting(false);

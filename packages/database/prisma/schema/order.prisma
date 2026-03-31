@@ -58,6 +58,8 @@ model Order {
   trackingNumber String?
   paymentMethod  String?
   paymentStatus  String @default("UNPAID")
+  
+  stripeSessionId String? @unique
 
   items OrderItem[]
 
