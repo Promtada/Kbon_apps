@@ -3,44 +3,121 @@
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { toast } from 'sonner';
 import { useCart } from '../../store/useCartStore';
+import { useAuthStore } from '../../store/useAuthStore';
+import api from '../../lib/axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { STORAGE_KEYS } from '../../lib/storageKeys';
-import { 
-  ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck, 
-  ArrowRight, Truck, Tag, Loader2
+import {
+  ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck,
+  ArrowRight, Truck, Tag, Loader2, User, Phone, Home, Map, Hash, AlertTriangle,
 } from 'lucide-react';
 
+// ─── Zod Schema ───
+const checkoutSchema = z.object({
+  fullName: z.string().min(1, 'กรุณากรอกชื่อผู้รับ'),
+  phone: z
+    .string()
+    .min(1, 'กรุณากรอกเบอร์โทรศัพท์')
+    .regex(/^0\d{8,9}$/, 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678)'),
+  addressLine: z.string().min(1, 'กรุณากรอกที่อยู่'),
+  province: z.string().min(1, 'กรุณากรอกจังหวัด'),
+  postalCode: z
+    .string()
+    .min(1, 'กรุณากรอกรหัสไปรษณีย์')
+    .regex(/^\d{5}$/, 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก'),
+});
+
+type CheckoutFormData = z.infer<typeof checkoutSchema>;
+
+// ─── Input helper ───
+const FormInput = React.forwardRef<
+  HTMLInputElement,
+  {
+    label: string;
+    icon: React.ElementType;
+    error?: string;
+  } & React.InputHTMLAttributes<HTMLInputElement>
+>(function FormInput({ label, icon: Icon, error, ...inputProps }, ref) {
+  return (
+    <div>
+      <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+        <Icon size={13} className="text-slate-400" />
+        {label}
+      </label>
+      <input
+        ref={ref}
+        {...inputProps}
+        className={`w-full bg-slate-50 border rounded-2xl px-4 py-3.5 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-[#22C55E] focus:bg-white outline-none transition-all placeholder:text-slate-300 ${
+          error ? 'border-red-300 bg-red-50/30' : 'border-slate-200'
+        }`}
+      />
+      {error && (
+        <p className="text-[11px] text-red-500 font-medium mt-1.5 ml-1">{error}</p>
+      )}
+    </div>
+  );
+});
+
+// ═══════════════════════════════════════════════════
 export default function CheckoutPage() {
   const router = useRouter();
   const { items, totalPrice, totalItems, clearCart } = useCart();
-  
+  const authUser = useAuthStore((s) => s.user);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+
   const [isClient, setIsClient] = useState(false);
-  const [address, setAddress] = useState('123 ถนนสุขุมวิท แขวงคลองเตย เขตคลองเตย กรุงเทพมหานคร 10110');
   const [paymentMethod, setPaymentMethod] = useState('PromptPay');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [user, setUser] = useState<any>(null);
+  const [stockErrors, setStockErrors] = useState<string[]>([]);
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<CheckoutFormData>({
+    resolver: zodResolver(checkoutSchema),
+    defaultValues: {
+      fullName: authUser?.name || '',
+      phone: authUser?.phone || '',
+      addressLine: '',
+      province: '',
+      postalCode: '',
+    },
+  });
 
   useEffect(() => {
     setIsClient(true);
-    const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
-    if (savedUser) setUser(JSON.parse(savedUser));
   }, []);
+
+  // Auth guard — redirect to login if not authenticated
+  useEffect(() => {
+    if (isClient && !isAuthenticated) {
+      router.replace('/login');
+    }
+  }, [isClient, isAuthenticated, router]);
 
   const shippingFee = totalPrice >= 1500 ? 0 : 80;
   const grandTotal = totalPrice + shippingFee;
 
-  // Don't render until hydration to avoid mismatch with localStorage Cart
+  // Don't render until hydration
   if (!isClient) return null;
 
+  // Not authenticated
+  if (!isAuthenticated) return null;
+
+  // Empty cart
   if (items.length === 0 && !isSubmitting) {
     return (
       <div className="min-h-screen bg-[#F8FAFC] flex flex-col">
-        <Navbar user={user} />
+        <Navbar user={authUser} />
         <div className="flex-1 flex flex-col items-center justify-center p-6 text-center">
           <div className="w-24 h-24 bg-emerald-50 rounded-full flex items-center justify-center mb-6">
-             <Truck size={40} className="text-[#22C55E]" />
+            <Truck size={40} className="text-[#22C55E]" />
           </div>
           <h2 className="text-2xl font-black text-slate-800 mb-2">ไม่มีสินค้าที่จะชำระเงิน</h2>
           <p className="text-slate-500 mb-8 max-w-sm">กรุณากลับไปเลือกดูและเพิ่มสินค้าลงในตะกร้าก่อนดำเนินการต่อ</p>
@@ -53,48 +130,85 @@ export default function CheckoutPage() {
     );
   }
 
-  const handleCheckout = async () => {
+  // ─── Frontend stock pre-check ───
+  const preCheckStock = async (): Promise<boolean> => {
+    setStockErrors([]);
+    try {
+      const errors: string[] = [];
+      // Fetch latest stock for each product
+      for (const item of items) {
+        const res = await api.get(`/products/${item.product.id}`);
+        const currentStock = res.data.stock;
+        if (currentStock < item.quantity) {
+          errors.push(
+            `"${item.product.name}" คงเหลือ ${currentStock} ชิ้น (คุณเลือก ${item.quantity} ชิ้น)`
+          );
+        }
+      }
+      if (errors.length > 0) {
+        setStockErrors(errors);
+        return false;
+      }
+      return true;
+    } catch {
+      // If stock check fails, let the backend handle it
+      return true;
+    }
+  };
+
+  // ─── Submit ───
+  const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
-    
-    // Format cart data for backend
+
+    // Frontend stock pre-check
+    const stockOk = await preCheckStock();
+    if (!stockOk) {
+      setIsSubmitting(false);
+      toast.error('สินค้าบางรายการคงเหลือไม่เพียงพอ', {
+        description: 'กรุณาปรับจำนวนในตะกร้าก่อนสั่งซื้อ',
+      });
+      return;
+    }
+
     const payload = {
-      shippingAddress: address,
+      fullName: data.fullName,
+      phone: data.phone,
+      addressLine: data.addressLine,
+      province: data.province,
+      postalCode: data.postalCode,
       paymentMethod,
-      totalAmount: grandTotal,
-      items: items.map(i => ({
+      items: items.map((i) => ({
         productId: i.product.id,
         quantity: i.quantity,
-        price: i.product.price
-      }))
+        price: i.product.price,
+      })),
     };
 
     try {
-      const res = await fetch('http://localhost:4000/api/orders/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(payload)
-      });
+      const res = await api.post('/orders/checkout', payload);
 
-      const data = await res.json();
-      if (data.success) {
+      if (res.data.success) {
         clearCart();
+        toast.success('สั่งซื้อสำเร็จ!', {
+          description: `หมายเลขคำสั่งซื้อ: ${res.data.orderId}`,
+        });
         router.push('/checkout/success');
       } else {
-        alert('เกิดข้อผิดพลาดในการสร้างคำสั่งซื้อ: ' + data.error);
+        toast.error('เกิดข้อผิดพลาด', { description: res.data.error });
         setIsSubmitting(false);
       }
-    } catch (e) {
-      console.error(e);
-      alert('ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ ลองใหม่อีกครั้ง');
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        'ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์ได้ ลองใหม่อีกครั้ง';
+      toast.error('สั่งซื้อไม่สำเร็จ', { description: Array.isArray(msg) ? msg[0] : msg });
       setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col text-slate-900">
-      <Navbar user={user} />
+      <Navbar user={authUser} />
 
       {/* Header */}
       <div className="bg-white border-b border-slate-100 py-4">
@@ -110,150 +224,197 @@ export default function CheckoutPage() {
       <main className="flex-1 max-w-6xl w-full mx-auto px-6 py-10 md:py-12">
         <h1 className="text-3xl font-black mb-10 text-slate-800 tracking-tight">ดำเนินการชำระเงิน</h1>
 
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
-          
-          {/* ----- Left Form Column ----- */}
-          <div className="lg:col-span-3 space-y-8">
-            
-            {/* 1. Address Section */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-               <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-5">
-                 <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
-                   <MapPin size={20} />
-                 </div>
-                 ที่อยู่จัดส่งของคุณ
-               </h2>
-               
-               <div className="space-y-4">
-                 <div className="space-y-1.5">
-                   <label className="text-sm font-bold text-slate-600 block">ข้อมูลที่อยู่โดยละเอียด</label>
-                   <textarea 
-                     rows={3}
-                     value={address}
-                     onChange={(e) => setAddress(e.target.value)}
-                     placeholder="บ้านเลขที่, ถนน, ซอย, ตำบล/แขวง, อำเภอ/เขต, จังหวัด, รหัสไปรษณีย์"
-                     className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-[#22C55E] outline-none transition-all placeholder:text-slate-300 resize-none"
-                   />
-                 </div>
-               </div>
+        {/* Stock errors banner */}
+        {stockErrors.length > 0 && (
+          <div className="mb-8 p-5 bg-red-50 border border-red-200 rounded-2xl space-y-2">
+            <div className="flex items-center gap-2 text-red-700 font-black">
+              <AlertTriangle size={18} />
+              สินค้าบางรายการคงเหลือไม่เพียงพอ
             </div>
-
-            {/* 2. Payment Section */}
-            <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
-               <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-5">
-                 <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
-                   <CreditCard size={20} />
-                 </div>
-                 เลือกช่องทางการชำระเงิน
-               </h2>
-               
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                 
-                 {/* Option 1 */}
-                 <button 
-                  onClick={() => setPaymentMethod('PromptPay')}
-                  className={`flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left ${
-                   paymentMethod === 'PromptPay' 
-                     ? 'border-[#22C55E] bg-emerald-50 shadow-md shadow-emerald-100' 
-                     : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-                 }`}>
-                   <Banknote size={24} className={paymentMethod === 'PromptPay' ? 'text-[#22C55E]' : 'text-slate-400'} />
-                   <span className={`font-black mt-3 ${paymentMethod === 'PromptPay' ? 'text-emerald-900' : 'text-slate-700'}`}>โอนเงินผ่านธนาคาร</span>
-                   <span className="text-xs text-slate-500 font-medium mt-1">สแกน QR PromptPay ยอดเข้าทันที</span>
-                 </button>
-
-                 {/* Option 2 */}
-                 <button 
-                  onClick={() => setPaymentMethod('Credit Card')}
-                  className={`flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left ${
-                   paymentMethod === 'Credit Card' 
-                     ? 'border-[#22C55E] bg-emerald-50 shadow-md shadow-emerald-100' 
-                     : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
-                 }`}>
-                   <CreditCard size={24} className={paymentMethod === 'Credit Card' ? 'text-[#22C55E]' : 'text-slate-400'} />
-                   <span className={`font-black mt-3 ${paymentMethod === 'Credit Card' ? 'text-emerald-900' : 'text-slate-700'}`}>บัตรเครดิต/เดบิต</span>
-                   <span className="text-xs text-slate-500 font-medium mt-1">รองรับ Visa, Mastercard, JCB</span>
-                 </button>
-
-               </div>
-
-               <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-sm font-medium text-slate-600 leading-relaxed">
-                 <ShieldCheck size={20} className="text-blue-500 flex-shrink-0" />
-                 <div>ปลอดภัย 100% การชำระเงินของคุณได้รับการเข้ารหัสอย่างปลอดภัยผ่านผู้ให้บริการที่ได้รับมาตรฐานสากล</div>
-               </div>
-            </div>
-
+            {stockErrors.map((e, i) => (
+              <p key={i} className="text-sm text-red-600 font-medium ml-6">• {e}</p>
+            ))}
+            <p className="text-xs text-red-500 font-medium ml-6">
+              กรุณากลับไป <Link href="/cart" className="underline font-bold">แก้ไขตะกร้า</Link> ก่อนสั่งซื้อ
+            </p>
           </div>
+        )}
 
-          {/* ----- Right Summary Column ----- */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sticky top-24 select-none">
-              <h2 className="text-lg font-black text-slate-800 mb-6 pb-4 border-b border-slate-100">สรุปคำสั่งซื้อ</h2>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
 
-              {/* Items scroll view (compressed) */}
-              <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 mb-6 custom-scrollbar">
-                {items.map(item => (
-                  <div key={item.product.id} className="flex items-center gap-4">
-                    <div className="w-16 h-16 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden flex-shrink-0 p-1">
-                      {item.product.mainImageUrl && (
-                        <img src={item.product.mainImageUrl} className="w-full h-full object-cover rounded-lg" />
-                      )}
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-black text-slate-800 line-clamp-2 leading-snug">{item.product.name}</p>
-                      <p className="text-xs text-slate-400 mt-1">จำนวน {item.quantity} ชิ้น</p>
-                    </div>
-                    <p className="text-sm font-black text-[#22C55E]">
-                      ฿{(item.product.price * item.quantity).toLocaleString('th-TH')}
-                    </p>
+            {/* ----- Left Form Column ----- */}
+            <div className="lg:col-span-3 space-y-8">
+
+              {/* 1. Address Section */}
+              <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-6">
+                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
+                    <MapPin size={20} />
                   </div>
-                ))}
+                  ที่อยู่จัดส่งของคุณ
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                  <FormInput
+                    label="ชื่อผู้รับ"
+                    icon={User}
+                    placeholder="ชื่อ-นามสกุล"
+                    error={errors.fullName?.message}
+                    {...register('fullName')}
+                  />
+                  <FormInput
+                    label="เบอร์โทรศัพท์"
+                    icon={Phone}
+                    type="tel"
+                    placeholder="0812345678"
+                    error={errors.phone?.message}
+                    {...register('phone')}
+                  />
+                  <div className="md:col-span-2">
+                    <FormInput
+                      label="ที่อยู่"
+                      icon={Home}
+                      placeholder="บ้านเลขที่, ถนน, ซอย, ตำบล/แขวง, อำเภอ/เขต"
+                      error={errors.addressLine?.message}
+                      {...register('addressLine')}
+                    />
+                  </div>
+                  <FormInput
+                    label="จังหวัด"
+                    icon={Map}
+                    placeholder="กรุงเทพมหานคร"
+                    error={errors.province?.message}
+                    {...register('province')}
+                  />
+                  <FormInput
+                    label="รหัสไปรษณีย์"
+                    icon={Hash}
+                    placeholder="10110"
+                    error={errors.postalCode?.message}
+                    {...register('postalCode')}
+                  />
+                </div>
               </div>
 
-              {/* Price calculations */}
-              <div className="space-y-3 mb-6 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
-                <div className="flex justify-between items-center">
-                   <span>ราคาสินค้า ({totalItems} ชิ้น)</span>
-                   <span className="font-bold text-slate-800">฿{totalPrice.toLocaleString('th-TH')}</span>
+              {/* 2. Payment Section */}
+              <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
+                <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-5">
+                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
+                    <CreditCard size={20} />
+                  </div>
+                  เลือกช่องทางการชำระเงิน
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* PromptPay */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('PromptPay')}
+                    className={`flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left ${
+                      paymentMethod === 'PromptPay'
+                        ? 'border-[#22C55E] bg-emerald-50 shadow-md shadow-emerald-100'
+                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <Banknote size={24} className={paymentMethod === 'PromptPay' ? 'text-[#22C55E]' : 'text-slate-400'} />
+                    <span className={`font-black mt-3 ${paymentMethod === 'PromptPay' ? 'text-emerald-900' : 'text-slate-700'}`}>โอนเงินผ่านธนาคาร</span>
+                    <span className="text-xs text-slate-500 font-medium mt-1">สแกน QR PromptPay ยอดเข้าทันที</span>
+                  </button>
+
+                  {/* Credit Card */}
+                  <button
+                    type="button"
+                    onClick={() => setPaymentMethod('Credit Card')}
+                    className={`flex flex-col items-start p-5 rounded-2xl border-2 transition-all text-left ${
+                      paymentMethod === 'Credit Card'
+                        ? 'border-[#22C55E] bg-emerald-50 shadow-md shadow-emerald-100'
+                        : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                    }`}
+                  >
+                    <CreditCard size={24} className={paymentMethod === 'Credit Card' ? 'text-[#22C55E]' : 'text-slate-400'} />
+                    <span className={`font-black mt-3 ${paymentMethod === 'Credit Card' ? 'text-emerald-900' : 'text-slate-700'}`}>บัตรเครดิต/เดบิต</span>
+                    <span className="text-xs text-slate-500 font-medium mt-1">รองรับ Visa, Mastercard, JCB</span>
+                  </button>
                 </div>
-                <div className="flex justify-between items-center">
-                   <span>ค่าจัดส่ง</span>
-                   {shippingFee === 0 ? (
+
+                <div className="mt-6 flex items-start gap-3 p-4 bg-blue-50/50 rounded-xl border border-blue-100 text-sm font-medium text-slate-600 leading-relaxed">
+                  <ShieldCheck size={20} className="text-blue-500 flex-shrink-0" />
+                  <div>ปลอดภัย 100% การชำระเงินของคุณได้รับการเข้ารหัสอย่างปลอดภัยผ่านผู้ให้บริการที่ได้รับมาตรฐานสากล</div>
+                </div>
+              </div>
+            </div>
+
+            {/* ----- Right Summary Column ----- */}
+            <div className="lg:col-span-2">
+              <div className="bg-white rounded-[2rem] border border-slate-100 shadow-sm p-6 sticky top-24 select-none">
+                <h2 className="text-lg font-black text-slate-800 mb-6 pb-4 border-b border-slate-100">สรุปคำสั่งซื้อ</h2>
+
+                {/* Items */}
+                <div className="max-h-[300px] overflow-y-auto pr-2 space-y-4 mb-6">
+                  {items.map((item) => (
+                    <div key={item.product.id} className="flex items-center gap-4">
+                      <div className="w-16 h-16 bg-slate-50 rounded-xl border border-slate-100 overflow-hidden flex-shrink-0 p-1">
+                        {item.product.mainImageUrl && (
+                          <img src={item.product.mainImageUrl} className="w-full h-full object-cover rounded-lg" />
+                        )}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-black text-slate-800 line-clamp-2 leading-snug">{item.product.name}</p>
+                        <p className="text-xs text-slate-400 mt-1">จำนวน {item.quantity} ชิ้น</p>
+                      </div>
+                      <p className="text-sm font-black text-[#22C55E]">
+                        ฿{(item.product.price * item.quantity).toLocaleString('th-TH')}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Price calculations */}
+                <div className="space-y-3 mb-6 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
+                  <div className="flex justify-between items-center">
+                    <span>ราคาสินค้า ({totalItems} ชิ้น)</span>
+                    <span className="font-bold text-slate-800">฿{totalPrice.toLocaleString('th-TH')}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span>ค่าจัดส่ง</span>
+                    {shippingFee === 0 ? (
                       <span className="text-[#22C55E] font-black">ฟรี</span>
                     ) : (
                       <span className="font-bold text-slate-800">฿{shippingFee.toLocaleString('th-TH')}</span>
-                   )}
-                </div>
-                {shippingFee === 0 && (
-                  <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl flex items-center justify-end gap-1.5 mt-1">
-                    <Tag size={12} /> ได้รับสิทธิ์จัดส่งฟรีแล้ว!
+                    )}
                   </div>
-                )}
-              </div>
+                  {shippingFee === 0 && (
+                    <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl flex items-center justify-end gap-1.5 mt-1">
+                      <Tag size={12} /> ได้รับสิทธิ์จัดส่งฟรีแล้ว!
+                    </div>
+                  )}
+                </div>
 
-              <div className="pt-5 border-t border-slate-200 flex items-end justify-between mb-8">
-                <span className="text-base font-black text-slate-800">ยอดรวมทั้งสิ้น</span>
-                <span className="text-3xl font-black text-[#22C55E]">฿{grandTotal.toLocaleString('th-TH')}</span>
-              </div>
+                <div className="pt-5 border-t border-slate-200 flex items-end justify-between mb-8">
+                  <span className="text-base font-black text-slate-800">ยอดรวมทั้งสิ้น</span>
+                  <span className="text-3xl font-black text-[#22C55E]">฿{grandTotal.toLocaleString('th-TH')}</span>
+                </div>
 
-              {/* Submit CTA */}
-              <button 
-                onClick={handleCheckout}
-                disabled={isSubmitting}
-                className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black rounded-2xl shadow-xl shadow-green-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
-              >
-                {isSubmitting ? (
-                  <><Loader2 className="animate-spin" size={20} /> กำลังประมวลผล...</>
-                ) : (
-                  <>ยืนยันคำสั่งซื้อและชำระเงิน <ArrowRight size={20} /></>
-                )}
-              </button>
+                {/* Submit CTA */}
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] disabled:bg-slate-300 disabled:cursor-not-allowed text-white font-black rounded-2xl shadow-xl shadow-green-200 transition-all flex items-center justify-center gap-2 active:scale-[0.98]"
+                >
+                  {isSubmitting ? (
+                    <><Loader2 className="animate-spin" size={20} /> กำลังประมวลผล...</>
+                  ) : (
+                    <>ยืนยันคำสั่งซื้อและชำระเงิน <ArrowRight size={20} /></>
+                  )}
+                </button>
+              </div>
             </div>
-          </div>
 
-        </div>
+          </div>
+        </form>
       </main>
-      
+
       <Footer />
     </div>
   );

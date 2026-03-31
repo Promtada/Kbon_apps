@@ -1,5 +1,7 @@
-import { Controller, Get, Post, Body, Param, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, NotFoundException, UseGuards, Req } from '@nestjs/common';
 import { OrdersService } from './orders.service';
+import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('orders')
 export class OrdersController {
@@ -10,14 +12,12 @@ export class OrdersController {
     return this.ordersService.findAll();
   }
 
+  // --- 🌟 Checkout: ต้อง Login ก่อนถึงจะสั่งซื้อได้ ---
   @Post('checkout')
-  async checkout(@Body() body: any) {
-    try {
-      const order = await this.ordersService.createCheckout(body);
-      return { success: true, orderId: order.id };
-    } catch (e: any) {
-      return { success: false, error: e.message };
-    }
+  @UseGuards(JwtAuthGuard)
+  async checkout(@Req() req, @Body() dto: CreateCheckoutDto) {
+    const order = await this.ordersService.createCheckout(req.user.id, dto);
+    return { success: true, orderId: order.id };
   }
 
   @Get(':id')

@@ -7,6 +7,7 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
+  useState,
 } from 'react';
 import { STORAGE_KEYS } from '../lib/storageKeys';
 
@@ -49,7 +50,6 @@ function cartReducer(state: CartState, action: CartAction): CartState {
     case 'ADD_ITEM': {
       const existing = state.items.find((i) => i.product.id === action.product.id);
       if (existing) {
-        // Increment existing quantity by the requested amount
         return {
           ...state,
           items: state.items.map((i) =>
@@ -100,10 +100,13 @@ interface CartContextValue {
   items: CartItem[];
   totalItems: number;
   totalPrice: number;
+  isOpen: boolean;
   addItem: (product: CartProduct, quantity?: number) => void;
   removeItem: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
+  openCart: () => void;
+  closeCart: () => void;
 }
 
 const CartContext = createContext<CartContextValue | null>(null);
@@ -116,6 +119,7 @@ const initialState: CartState = { items: [] };
 
 export function CartProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, initialState);
+  const [isOpen, setIsOpen] = useState(false);
 
   // Hydrate from localStorage on first render
   useEffect(() => {
@@ -157,6 +161,9 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: 'CLEAR_CART' });
   }, []);
 
+  const openCart = useCallback(() => setIsOpen(true), []);
+  const closeCart = useCallback(() => setIsOpen(false), []);
+
   const totalItems = useMemo(
     () => state.items.reduce((sum, i) => sum + i.quantity, 0),
     [state.items]
@@ -172,12 +179,15 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
       items: state.items,
       totalItems,
       totalPrice,
+      isOpen,
       addItem,
       removeItem,
       updateQuantity,
       clearCart,
+      openCart,
+      closeCart,
     }),
-    [state.items, totalItems, totalPrice, addItem, removeItem, updateQuantity, clearCart]
+    [state.items, totalItems, totalPrice, isOpen, addItem, removeItem, updateQuantity, clearCart, openCart, closeCart]
   );
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

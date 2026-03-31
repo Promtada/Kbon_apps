@@ -1,19 +1,14 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import Link from 'next/link';
 import { CheckCircle2, ShoppingBag, ArrowRight } from 'lucide-react';
 import Navbar from '../../components/Navbar';
 import Footer from '../../components/Footer';
-import { STORAGE_KEYS } from '../../../lib/storageKeys';
+import { useAuthStore } from '../../../store/useAuthStore';
 
 export default function CheckoutSuccessPage() {
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USER);
-    if (saved) setUser(JSON.parse(saved));
-  }, []);
+  const user = useAuthStore((s) => s.user);
 
   return (
     <div className="min-h-screen bg-[#F8FAFC] flex flex-col">

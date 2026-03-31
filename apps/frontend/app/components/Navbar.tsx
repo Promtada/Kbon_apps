@@ -9,7 +9,7 @@ import { useAuthStore } from '../../store/useAuthStore';
 
 export default function Navbar({ user }: { user?: any }) {
   const pathname = usePathname();
-  const { totalItems, clearCart } = useCart();
+  const { totalItems, openCart } = useCart();
   const [adminAvatar, setAdminAvatar] = useState<string | null>(null);
   const [isMounted, setIsMounted] = useState(false);
 
@@ -79,10 +79,10 @@ export default function Navbar({ user }: { user?: any }) {
         {/* Right side */}
         <div className="flex items-center gap-6">
 
-          {/* Cart icon → navigates to /cart */}
-          <Link
-            href="/cart"
-            id="navbar-cart-link"
+          {/* Cart icon → opens CartDrawer */}
+          <button
+            onClick={openCart}
+            id="navbar-cart-btn"
             aria-label={`ตะกร้าสินค้า${totalItems > 0 ? ` (${totalItems} ชิ้น)` : ''}`}
             className="relative text-slate-600 hover:text-[#22C55E] transition-colors"
           >
@@ -92,7 +92,7 @@ export default function Navbar({ user }: { user?: any }) {
                 {totalItems > 99 ? '99+' : totalItems}
               </span>
             )}
-          </Link>
+          </button>
 
           {/* Profile */}
           {activeUser ? (

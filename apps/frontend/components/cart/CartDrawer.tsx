@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef } from 'react';
+import Link from 'next/link';
 import { X, Trash2, Plus, Minus, ShoppingBag, Leaf, ArrowRight } from 'lucide-react';
 import { useCart } from '../../store/useCartStore';
 
@@ -10,7 +11,7 @@ export default function CartDrawer() {
 
   const drawerRef = useRef<HTMLDivElement>(null);
 
-  // Trap focus / close on Escape
+  // Close on Escape
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isOpen) closeCart();
@@ -117,14 +118,25 @@ export default function CartDrawer() {
               ราคายังไม่รวมค่าจัดส่ง · คำนวณขั้นตอนถัดไป
             </p>
 
-            {/* Checkout Button */}
-            <button
+            {/* Checkout Button — navigates to /checkout */}
+            <Link
+              href="/checkout"
+              onClick={closeCart}
               id="cart-checkout-btn"
               className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] text-white font-black text-base rounded-2xl shadow-xl shadow-green-200 flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98]"
             >
               สั่งซื้อสินค้า
               <ArrowRight size={20} />
-            </button>
+            </Link>
+
+            {/* View full cart page */}
+            <Link
+              href="/cart"
+              onClick={closeCart}
+              className="w-full py-2.5 text-center block text-[#22C55E] font-bold text-xs tracking-wide hover:text-[#1eb054] transition-colors"
+            >
+              ดูตะกร้าแบบเต็ม →
+            </Link>
 
             {/* Clear Cart */}
             <button

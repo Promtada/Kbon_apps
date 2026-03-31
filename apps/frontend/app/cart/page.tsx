@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { useCart } from '../../store/useCartStore';
-import { STORAGE_KEYS } from '../../lib/storageKeys';
+import { useAuthStore } from '../../store/useAuthStore';
 import {
   Trash2,
   Plus,
@@ -22,12 +22,7 @@ import {
 
 export default function CartPage() {
   const { items, totalItems, totalPrice, removeItem, updateQuantity, clearCart } = useCart();
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const saved = localStorage.getItem(STORAGE_KEYS.USER);
-    if (saved) setUser(JSON.parse(saved));
-  }, []);
+  const user = useAuthStore((s) => s.user);
 
   const shippingFee = totalPrice >= 1500 ? 0 : 80;
   const grandTotal = totalPrice + shippingFee;

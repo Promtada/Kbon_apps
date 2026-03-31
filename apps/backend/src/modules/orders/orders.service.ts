@@ -1,5 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { CreateCheckoutDto } from './dto/create-checkout.dto';
 
 @Injectable()
 export class OrdersService {
@@ -60,44 +61,93 @@ export class OrdersService {
     });
   }
 
-  async createCheckout(data: any) {
-    // Simulate finding a logged-in user
-    const firstUser = await this.prisma.user.findFirst();
-    if (!firstUser) {
-      throw new Error('No user found for simulation');
+  // --- 🌟 Checkout ที่ปลอดภัย: ใช้ userId จาก JWT ---
+  async createCheckout(userId: string, dto: CreateCheckoutDto) {
+    // 1. ตรวจสอบสินค้าทุกชิ้น (stock + existence)
+    const productIds = dto.items.map((i) => i.productId);
+    const products = await this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+    });
+
+    if (products.length !== productIds.length) {
+      throw new BadRequestException('มีสินค้าบางรายการไม่พบในระบบ');
     }
 
-    // Attempt to grab an address or use a fallback UUID to satisfy relation
-    const userAddress = await this.prisma.address.findFirst({
-      where: { userId: firstUser.id }
-    });
-    
-    // We assume the frontend parsed items to match: { productId, quantity, price }
-    const orderItems = data.items.map((item: any) => ({
-      productId: item.productId,
-      quantity: item.quantity,
-      priceAtPurchase: item.price,
-    }));
-
-    return this.prisma.order.create({
-      data: {
-        userId: firstUser.id,
-        addressId: userAddress ? userAddress.id : '', // Normally would enforce this
-        shippingAddressSnapshot: JSON.stringify({
-          fullName: firstUser.name,
-          phone: firstUser.phone || '',
-          addressLine: data.shippingAddress,
-          province: '',
-          postalCode: ''
-        }),
-        totalAmount: data.totalAmount,
-        paymentMethod: data.paymentMethod,
-        paymentStatus: 'PAID', // Instant mock
-        status: 'PENDING',
-        items: {
-          create: orderItems,
-        }
+    for (const item of dto.items) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) {
+        throw new BadRequestException(`ไม่พบสินค้า ${item.productId}`);
       }
+      if (product.stock < item.quantity) {
+        throw new BadRequestException(
+          `สินค้า "${product.name}" คงเหลือไม่เพียงพอ (เหลือ ${product.stock} ชิ้น)`,
+        );
+      }
+    }
+
+    // 2. คำนวณยอดรวม (ใช้ราคาจากฝั่ง server เพื่อป้องกันการแก้ไขราคา)
+    const totalAmount = dto.items.reduce((sum, item) => {
+      const product = products.find((p) => p.id === item.productId)!;
+      return sum + product.price * item.quantity;
+    }, 0);
+
+    // 3. ทำทุกอย่างใน Transaction เพื่อความปลอดภัย
+    return this.prisma.$transaction(async (tx) => {
+      // 3a. สร้าง Address
+      const address = await tx.address.create({
+        data: {
+          userId,
+          fullName: dto.fullName,
+          phone: dto.phone,
+          addressLine: dto.addressLine,
+          province: dto.province,
+          postalCode: dto.postalCode,
+        },
+      });
+
+      // 3b. สร้าง Order + OrderItems
+      const order = await tx.order.create({
+        data: {
+          userId,
+          addressId: address.id,
+          shippingAddressSnapshot: JSON.stringify({
+            fullName: dto.fullName,
+            phone: dto.phone,
+            addressLine: dto.addressLine,
+            province: dto.province,
+            postalCode: dto.postalCode,
+          }),
+          totalAmount,
+          paymentMethod: dto.paymentMethod,
+          paymentStatus: 'UNPAID',
+          status: 'PENDING',
+          items: {
+            create: dto.items.map((item) => {
+              const product = products.find((p) => p.id === item.productId)!;
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                priceAtPurchase: product.price,
+              };
+            }),
+          },
+        },
+        include: {
+          items: true,
+        },
+      });
+
+      // 3c. ลด Stock สินค้า
+      for (const item of dto.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: {
+            stock: { decrement: item.quantity },
+          },
+        });
+      }
+
+      return order;
     });
   }
 }
