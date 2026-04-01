@@ -209,15 +209,7 @@ export class OrdersService {
         },
       });
 
-      // 3c. ลด Stock สินค้า
-      for (const item of dto.items) {
-        await tx.product.update({
-          where: { id: item.productId },
-          data: {
-            stock: { decrement: item.quantity },
-          },
-        });
-      }
+      // (สต็อกสินค้าจะถูกตัดเมื่อลูกค้าชำระเงินสำเร็จผ่าน Webhook แทน)
 
       return order;
     });
@@ -241,8 +233,15 @@ export class OrdersService {
       throw new BadRequestException('คำสั่งซื้อนี้ชำระเงินเรียบร้อยแล้ว');
     }
 
+    // 🌟 1. ตรวจสอบสต็อกสินค้าก่อนส่งไปจ่ายเงิน
+    for (const item of order.items) {
+      if (item.product.stock < item.quantity) {
+        throw new BadRequestException(`สินค้า "${item.product.name}" มีจำนวนไม่พอในสต็อก`);
+      }
+    }
+
     // แปลงสินค้าเป็นรูปแบบที่ Stripe ต้องการ (หน่วยเป็นสตางค์)
-    const lineItems = order.items.map((item) => {
+    let lineItems = order.items.map((item) => {
       return {
         price_data: {
           currency: 'thb',
@@ -273,12 +272,31 @@ export class OrdersService {
       });
     }
 
+    // ตรวจสอบขั้นสุดท้ายเพื่อป้องกันปัญหาทศนิยมปัดเศษ หรือส่วนลดที่อาจทำให้ยอดรวมไม่ตรงกับ Database
+    const calculatedTotal = lineItems.reduce((acc, item) => acc + (item.price_data.unit_amount * item.quantity), 0);
+    const expectedTotal = Math.round(order.totalAmount * 100);
+
+    if (calculatedTotal !== expectedTotal) {
+      // หากยอดไม่ตรงกัน ให้รวบยอดทั้งหมดเป็น 1 รายการเพื่อป้องกัน Stripe API Error (ยอดที่ลูกค้าจ่ายต้องตรงเป๊ะ)
+      lineItems = [{
+        price_data: {
+          currency: 'thb',
+          product_data: {
+            name: `ยอดรวมคำสั่งซื้อ #${order.id.slice(-8).toUpperCase()}`,
+            images: [],
+          },
+          unit_amount: expectedTotal, // ยอดจากตาราง Order เป็นศูนย์กลาง
+        },
+        quantity: 1,
+      }];
+    }
+
     try {
       const session = await this.stripe.checkout.sessions.create({
         payment_method_types: ['card', 'promptpay'],
         line_items: lineItems,
         mode: 'payment',
-        success_url: `http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}&order_id=${order.id}`,
+        success_url: `http://localhost:3000/account/orders?success=true`,
         cancel_url: `http://localhost:3000/account/orders`,
         metadata: {
           orderId: order.id,
@@ -288,6 +306,7 @@ export class OrdersService {
       // บันทึก Stripe Session ID ลงไปใน Order
       await this.prisma.order.update({
         where: { id: order.id },
+        // @ts-ignore
         data: { stripeSessionId: session.id },
       });
 
@@ -319,25 +338,58 @@ export class OrdersService {
     if (event.type === 'checkout.session.completed') {
       const session = event.data.object as Stripe.Checkout.Session;
       
-      // อัปเดตสถานะคำสั่งซื้อจาก UNPAID เป็น PAID
+      // ตรวจสอบวิธีการชำระเงินที่ลูกค้าใช้งานจริงผ่าน PaymentIntent
+      let methodStr = 'Stripe';
       try {
+        if (session.payment_intent) {
+          const pi = await this.stripe.paymentIntents.retrieve(session.payment_intent as string, { expand: ['payment_method'] });
+          const pm = pi.payment_method as Stripe.PaymentMethod;
+          if (pm?.type === 'promptpay') methodStr = 'PromptPay';
+          else if (pm?.type === 'card') methodStr = 'Credit Card';
+          else if (pi.payment_method_types?.[0]) {
+            methodStr = pi.payment_method_types[0] === 'promptpay' ? 'PromptPay' : 'Credit Card';
+          }
+        }
+      } catch (err) {
+        console.error('Failed to retrieve precise payment method:', err);
+      }
+
+      // อัปเดตสถานะคำสั่งซื้อจาก UNPAID เป็น PAID และตัดสต็อกสินค้าด้วย Transaction
+      try {
+        // @ts-ignore - Bypass stale Prisma typings locally
         const order = await this.prisma.order.findUnique({
+          // @ts-ignore
           where: { stripeSessionId: session.id },
+          // @ts-ignore
+          include: { items: true }, 
         });
 
         if (order) {
-          await this.prisma.order.update({
-            where: { id: order.id },
-            data: { 
-              paymentStatus: 'PAID',
-              paymentMethod: 'Stripe', // บันทึกไว้ว่าจ่ายผ่านอะไร
-              status: order.status === 'PENDING' ? 'PAID' : order.status, // อัปเดตสถานะจัดส่งเบื้องต้น
-            },
+          await this.prisma.$transaction(async (tx) => {
+            // Step A: อัปเดตสถานะคำสั่งซื้อ
+            await tx.order.update({
+              where: { id: order.id },
+              data: { 
+                paymentStatus: 'PAID',
+                paymentMethod: methodStr, 
+                status: order.status === 'PENDING' ? 'PAID' : order.status, 
+              },
+            });
+
+            // Step B: ตัดสต็อกสินค้าอย่างปลอดภัย
+            // @ts-ignore
+            for (const item of order.items) {
+              await tx.product.update({
+                where: { id: item.productId },
+                data: { stock: { decrement: item.quantity } },
+              });
+            }
           });
-          console.log(`✅ Order ${order.id} payment status updated to PAID via Webhook.`);
+          
+          console.log(`✅ Order ${order.id} payment status updated and stock decremented via Webhook.`);
         }
       } catch (err) {
-        console.error('Failed to update order status internally', err);
+        console.error('Failed to process payment success transaction', err);
       }
     }
 

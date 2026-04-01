@@ -119,15 +119,24 @@ export default function CartDrawer() {
             </p>
 
             {/* Checkout Button — navigates to /checkout */}
-            <Link
-              href="/checkout"
-              onClick={closeCart}
-              id="cart-checkout-btn"
-              className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] text-white font-black text-base rounded-2xl shadow-xl shadow-green-200 flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98]"
-            >
-              สั่งซื้อสินค้า
-              <ArrowRight size={20} />
-            </Link>
+            {items.some((item: any) => item.product.stock < item.quantity) ? (
+              <button
+                disabled
+                className="w-full py-4 bg-slate-200 text-slate-400 font-black text-base rounded-2xl flex items-center justify-center gap-3 cursor-not-allowed"
+              >
+                สินค้าบางรายการเกินจำนวนสต็อก
+              </button>
+            ) : (
+              <Link
+                href="/checkout"
+                onClick={closeCart}
+                id="cart-checkout-btn"
+                className="w-full py-4 bg-[#22C55E] hover:bg-[#1eb054] text-white font-black text-base rounded-2xl shadow-xl shadow-green-200 flex items-center justify-center gap-3 transition-all duration-200 active:scale-[0.98]"
+              >
+                สั่งซื้อสินค้า
+                <ArrowRight size={20} />
+              </Link>
+            )}
 
             {/* View full cart page */}
             <Link
@@ -203,12 +212,21 @@ function CartItemRow({ item, onRemove, onIncrement, onDecrement }: CartItemRowPr
             <span className="w-7 text-center text-sm font-black text-slate-800">{quantity}</span>
             <button
               onClick={onIncrement}
+              disabled={quantity >= product.stock}
               aria-label="เพิ่มจำนวน"
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-500 hover:bg-emerald-50 hover:text-[#22C55E] transition-colors"
+              className={`w-7 h-7 rounded-lg flex items-center justify-center transition-colors ${
+                quantity >= product.stock 
+                  ? 'text-slate-300 bg-slate-50 cursor-not-allowed' 
+                  : 'text-slate-500 hover:bg-emerald-50 hover:text-[#22C55E]'
+              }`}
             >
               <Plus size={13} strokeWidth={2.5} />
             </button>
           </div>
+          
+          {quantity > product.stock && (
+            <p className="text-[10px] text-red-500 font-bold mt-1 absolute -bottom-4">เกินสต็อก!</p>
+          )}
 
           {/* Line total */}
           <p className="text-base font-black text-[#22C55E]">

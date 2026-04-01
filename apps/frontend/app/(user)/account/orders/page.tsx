@@ -2,11 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import api from '../../../../lib/axios';
 import { toast } from 'sonner';
+import confetti from 'canvas-confetti';
 import {
   Package, ShoppingBag, ArrowRight, Loader2, Clock,
-  CheckCircle2, Truck, XCircle, CreditCard, Leaf, ChevronDown, ChevronUp,
+  CheckCircle2, Truck, XCircle, CreditCard, Leaf, ChevronDown, ChevronUp, QrCode,
 } from 'lucide-react';
 
 // ─── Types ───
@@ -99,8 +101,32 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const searchParams = useSearchParams();
+  const router = useRouter();
 
   useEffect(() => {
+    // 🌟 ตรวจสอบว่าพึ่งชำระเงินเสร็จกลับมาหรือไม่
+    if (searchParams?.get('success') === 'true') {
+      confetti({
+        particleCount: 100,
+        spread: 80,
+        origin: { y: 0.6 },
+        colors: ['#22C55E', '#10B981', '#34D399', '#fcd34d']
+      });
+      
+      toast.success('🎉 ชำระเงินสำเร็จแล้ว!', {
+        description: 'เราได้รับคำสั่งซื้อของคุณแล้ว ระบบกำลังเตรียมจัดส่งให้เร็วที่สุด!',
+        style: {
+          background: '#F0FDF4',
+          borderColor: '#BBF7D0',
+          color: '#166534',
+        }
+      });
+
+      // ลบ Query Param ออกจาก URL จะได้ไม่แสดงซ้ำตอน Refresh
+      router.replace('/account/orders');
+    }
+
     const fetchOrders = async () => {
       try {
         const res = await api.get('/orders/my-orders');
@@ -287,9 +313,21 @@ function OrderCard({ order }: { order: Order }) {
               </p>
             </div>
             {order.paymentMethod && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-xl border border-slate-100">
-                <CreditCard size={13} className="text-slate-400" />
-                <span className="text-[11px] font-bold text-slate-500">{order.paymentMethod}</span>
+              <div 
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border ${
+                  order.paymentMethod === 'PromptPay' 
+                    ? 'bg-indigo-50 border-indigo-100 text-indigo-600'
+                    : order.paymentMethod === 'Credit Card'
+                    ? 'bg-blue-50 border-blue-100 text-blue-600'
+                    : 'bg-slate-50 border-slate-100 text-slate-500'
+                }`}
+              >
+                {order.paymentMethod === 'PromptPay' ? (
+                  <QrCode size={13} strokeWidth={2.5} />
+                ) : (
+                  <CreditCard size={13} strokeWidth={2.5} />
+                )}
+                <span className="text-[11px] font-black tracking-wide">{order.paymentMethod}</span>
               </div>
             )}
           </div>
