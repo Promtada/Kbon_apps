@@ -9,9 +9,12 @@ import { UploadsModule } from './modules/uploads/uploads.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
 
+import { ScheduleModule } from '@nestjs/schedule';
+
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
+    ScheduleModule.forRoot(),
     PrismaModule, 
     AuthModule, 
     ProductsModule, 
