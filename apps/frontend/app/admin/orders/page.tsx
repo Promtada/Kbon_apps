@@ -33,22 +33,22 @@ interface Order {
 
 // ─── Status configs ───
 const STATUS_COLORS: Record<string, string> = {
-  PENDING: 'bg-amber-50 text-amber-600 border-amber-200',
-  PAID: 'bg-blue-50 text-blue-600 border-blue-200',
-  SHIPPED: 'bg-purple-50 text-purple-600 border-purple-200',
+  PENDING: 'bg-slate-50 text-slate-600 border-slate-200',
+  PREPARING: 'bg-amber-50 text-amber-600 border-amber-200',
+  SHIPPED: 'bg-blue-50 text-blue-600 border-blue-200',
   DELIVERED: 'bg-[#22C55E]/10 text-[#22C55E] border-green-200',
   CANCELLED: 'bg-red-50 text-red-600 border-red-200',
 };
 const STATUS_LABELS: Record<string, string> = {
   PENDING: 'รอดำเนินการ',
-  PAID: 'เตรียมจัดส่ง',
+  PREPARING: 'กำลังเตรียมสินค้า',
   SHIPPED: 'กำลังจัดส่ง',
   DELIVERED: 'จัดส่งสำเร็จ',
-  CANCELLED: 'ยกเลิก',
+  CANCELLED: 'ยกเลิกแล้ว',
 };
 const STATUS_ICONS: Record<string, React.ReactNode> = {
   PENDING: <RefreshCw size={14} />,
-  PAID: <Package size={14} />,
+  PREPARING: <Package size={14} />,
   SHIPPED: <Truck size={14} />,
   DELIVERED: <CheckCircle2 size={14} />,
   CANCELLED: <XCircle size={14} />,

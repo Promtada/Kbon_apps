@@ -102,9 +102,21 @@ export default function AdminCouponsPage() {
                   </td>
                 </tr>
               ) : (
-                coupons.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 font-black text-emerald-600">{c.code}</td>
+                coupons.map((c) => {
+                  const isExhausted = c.usageLimit !== null && c.usageLimit > 0 && c.usedCount >= c.usageLimit;
+                  
+                  return (
+                  <tr key={c.id} className={`transition-colors ${isExhausted ? 'bg-slate-50/60 opacity-60 grayscale-[30%]' : 'hover:bg-slate-50'}`}>
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <span className={`font-black ${isExhausted ? 'text-slate-500' : 'text-emerald-600'}`}>{c.code}</span>
+                        {isExhausted && (
+                          <span className="inline-flex items-center justify-center bg-slate-200 text-slate-500 text-[10px] px-2 py-0.5 rounded flex-shrink-0 font-black uppercase tracking-widest whitespace-nowrap">
+                            หมดสิทธิ์
+                          </span>
+                        )}
+                      </div>
+                    </td>
                     <td className="px-6 py-4">
                       {c.discountType === 'FIXED' ? (
                         <span className="bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-xs font-bold">ลดตายตัว (Baht)</span>
@@ -133,7 +145,8 @@ export default function AdminCouponsPage() {
                       </button>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>

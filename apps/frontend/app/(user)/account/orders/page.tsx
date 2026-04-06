@@ -35,6 +35,13 @@ interface Order {
   trackingNumber?: string | null;
   shippingAddressSnapshot: string;
   items: OrderItem[];
+  coupon?: {
+    id: string;
+    code: string;
+    discountType: string;
+    discountValue: number;
+    maxDiscount?: number | null;
+  } | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -43,20 +50,20 @@ interface Order {
 const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; border: string; icon: React.ReactNode }> = {
   PENDING: {
     label: 'รอดำเนินการ',
+    color: 'text-slate-700',
+    bg: 'bg-slate-50',
+    border: 'border-slate-200',
+    icon: <Clock size={13} strokeWidth={2.5} />,
+  },
+  PREPARING: {
+    label: 'กำลังเตรียมสินค้า',
     color: 'text-amber-700',
     bg: 'bg-amber-50',
     border: 'border-amber-200',
-    icon: <Clock size={13} strokeWidth={2.5} />,
-  },
-  PAID: {
-    label: 'ชำระแล้ว',
-    color: 'text-emerald-700',
-    bg: 'bg-emerald-50',
-    border: 'border-emerald-200',
-    icon: <CheckCircle2 size={13} strokeWidth={2.5} />,
+    icon: <Package size={13} strokeWidth={2.5} />,
   },
   SHIPPED: {
-    label: 'จัดส่งแล้ว',
+    label: 'กำลังจัดส่ง',
     color: 'text-blue-700',
     bg: 'bg-blue-50',
     border: 'border-blue-200',
@@ -306,11 +313,25 @@ function OrderCard({ order }: { order: Order }) {
 
           {/* Right: Total + Payment info */}
           <div className="flex items-center gap-4 sm:gap-6">
-            <div className="text-right">
-              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ยอดรวม</p>
-              <p className="text-xl font-black text-[#22C55E] tracking-tight">
-                ฿{order.totalAmount.toLocaleString('th-TH')}
-              </p>
+            <div className="flex flex-col items-end gap-1.5">
+              <div className="text-right">
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">ยอดรวม</p>
+                <p className="text-xl font-black text-[#22C55E] tracking-tight">
+                  ฿{order.totalAmount.toLocaleString('th-TH')}
+                </p>
+              </div>
+              {order.coupon && (
+                <div className="bg-amber-50 text-amber-700 px-2 py-1 rounded-lg border border-amber-100 flex flex-col items-end">
+                  <p className="text-[10px] font-bold opacity-90">
+                    ส่วนลด (Coupon: {order.coupon.code})
+                  </p>
+                  <p className="text-[11px] font-black">
+                    {order.coupon.discountType === 'FIXED' 
+                      ? `-฿${order.coupon.discountValue.toLocaleString('th-TH')}`
+                      : `-${order.coupon.discountValue}%`}
+                  </p>
+                </div>
+              )}
             </div>
             {order.paymentMethod && (
               <div 

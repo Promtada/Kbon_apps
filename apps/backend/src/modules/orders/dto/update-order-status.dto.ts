@@ -3,8 +3,8 @@ import { IsString, IsNotEmpty, IsOptional, IsEnum } from 'class-validator';
 export class UpdateOrderStatusDto {
   @IsOptional()
   @IsString()
-  @IsEnum(['PENDING', 'PAID', 'SHIPPED', 'DELIVERED', 'CANCELLED'], {
-    message: 'สถานะไม่ถูกต้อง (PENDING, PAID, SHIPPED, DELIVERED, CANCELLED)',
+  @IsEnum(['PENDING', 'PREPARING', 'SHIPPED', 'DELIVERED', 'CANCELLED'], {
+    message: 'สถานะไม่ถูกต้อง (PENDING, PREPARING, SHIPPED, DELIVERED, CANCELLED)',
   })
   status?: string;
 

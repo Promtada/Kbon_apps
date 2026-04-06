@@ -42,6 +42,7 @@ export class OrdersService {
             },
           },
         },
+        coupon: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -71,6 +72,7 @@ export class OrdersService {
             },
           },
         },
+        coupon: true,
       },
     });
   }
@@ -91,6 +93,7 @@ export class OrdersService {
             },
           },
         },
+        coupon: true,
       },
       orderBy: { createdAt: 'desc' },
     });
@@ -107,6 +110,15 @@ export class OrdersService {
     if (dto.status) updateData.status = dto.status;
     if (dto.paymentStatus) updateData.paymentStatus = dto.paymentStatus;
     if (dto.trackingNumber !== undefined) updateData.trackingNumber = dto.trackingNumber;
+
+    if (dto.status === 'CANCELLED' && existing.status !== 'CANCELLED') {
+      if (existing.couponId) {
+        await this.prisma.coupon.update({
+          where: { id: existing.couponId },
+          data: { usedCount: { decrement: 1 } }
+        });
+      }
+    }
 
     return this.prisma.order.update({
       where: { id },
@@ -347,7 +359,7 @@ export class OrdersService {
         payment_method_types: ['card', 'promptpay'],
         line_items: lineItems,
         mode: 'payment',
-        success_url: `http://localhost:3000/account/orders?success=true`,
+        success_url: `http://localhost:3000/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `http://localhost:3000/account/orders`,
         metadata: {
           orderId: order.id,
@@ -429,7 +441,7 @@ export class OrdersService {
               data: { 
                 paymentStatus: 'PAID',
                 paymentMethod: methodStr, 
-                status: order.status === 'PENDING' ? 'PAID' : order.status, 
+                status: order.status === 'PENDING' ? 'PREPARING' : order.status, 
               },
             });
 

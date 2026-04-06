@@ -37,15 +37,11 @@ export class OrdersCronService {
       // Safe Inventory Restoration within an isolated transaction for each order
       for (const order of expiredOrders) {
         await this.prisma.$transaction(async (tx) => {
-          // Restore inventory for each item in the order
-          for (const item of order.items) {
-            await tx.product.update({
-              where: { id: item.productId },
-              data: {
-                stock: {
-                  increment: item.quantity,
-                },
-              },
+          // Decrement coupon usage limit since order is cancelled
+          if (order.couponId) {
+            await tx.coupon.update({
+              where: { id: order.couponId },
+              data: { usedCount: { decrement: 1 } },
             });
           }
 
@@ -55,7 +51,7 @@ export class OrdersCronService {
             data: { status: 'CANCELLED' },
           });
 
-          this.logger.log(`Auto-cancelled order #${order.id} and restored inventory for ${order.items.length} items`);
+          this.logger.log(`Auto-cancelled order #${order.id} and restored coupon usage (if any)`);
         });
       }
     } catch (error) {
