@@ -47,4 +47,8 @@ export class CreateCheckoutDto {
   @ValidateNested({ each: true })
   @Type(() => CheckoutItemDto)
   items: CheckoutItemDto[];
+
+  @IsOptional()
+  @IsString()
+  couponCode?: string;
 }

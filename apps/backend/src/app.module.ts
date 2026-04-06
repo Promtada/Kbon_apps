@@ -8,6 +8,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { UploadsModule } from './modules/uploads/uploads.module';
 import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { CouponsModule } from './modules/coupons/coupons.module';
 
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -21,7 +22,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     SettingsModule, 
     UploadsModule, 
     CustomersModule, 
-    OrdersModule
+    OrdersModule,
+    CouponsModule
   ],
   controllers: [],
   providers: [],

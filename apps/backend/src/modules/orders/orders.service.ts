@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { UpdateOrderStatusDto } from './dto/update-order-status.dto';
+import { CouponsService } from '../coupons/coupons.service';
 import Stripe from 'stripe';
 
 @Injectable()
@@ -12,6 +13,7 @@ export class OrdersService {
   constructor(
     private prisma: PrismaService,
     private configService: ConfigService,
+    private couponsService: CouponsService,
   ) {
     this.stripe = new Stripe(this.configService.get<string>('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2025-01-27.acacia' as any,
@@ -157,11 +159,21 @@ export class OrdersService {
       }
     }
 
-    // 2. คำนวณยอดรวม (ใช้ราคาจากฝั่ง server เพื่อป้องกันการแก้ไขราคา)
-    const totalAmount = dto.items.reduce((sum, item) => {
+    // 2. คำนวณยอดรวมดิบ (raw subtotal)
+    const cartTotalRaw = dto.items.reduce((sum, item) => {
       const product = products.find((p) => p.id === item.productId)!;
       return sum + product.price * item.quantity;
     }, 0);
+
+    // 2.5 ตรวจสอบและประยุกต์ใช้คูปองหากมี
+    let totalAmount = cartTotalRaw;
+    let couponId: string | undefined;
+
+    if (dto.couponCode) {
+      const validation = await this.couponsService.validateCoupon(dto.couponCode, cartTotalRaw);
+      totalAmount = validation.finalTotal;
+      couponId = validation.couponId;
+    }
 
     // 3. ทำทุกอย่างใน Transaction เพื่อความปลอดภัย
     return this.prisma.$transaction(async (tx) => {
@@ -193,6 +205,7 @@ export class OrdersService {
           paymentMethod: dto.paymentMethod,
           paymentStatus: 'UNPAID',
           status: 'PENDING',
+          couponId: couponId || null,
           items: {
             create: dto.items.map((item) => {
               const product = products.find((p) => p.id === item.productId)!;
@@ -208,6 +221,14 @@ export class OrdersService {
           items: true,
         },
       });
+
+      // 3c. อัปเดต usedCount ของคูปอง
+      if (couponId) {
+        await tx.coupon.update({
+          where: { id: couponId },
+          data: { usedCount: { increment: 1 } },
+        });
+      }
 
       // (สต็อกสินค้าจะถูกตัดเมื่อลูกค้าชำระเงินสำเร็จผ่าน Webhook แทน)
 
@@ -256,9 +277,39 @@ export class OrdersService {
     });
 
     // เพิ่มค่าจัดส่งเข้าไปด้วย (ถ้ามี)
-    const subtotal = order.items.reduce((sum, item) => sum + item.priceAtPurchase * item.quantity, 0);
-    const shippingFee = order.totalAmount - subtotal;
-    if (shippingFee > 0) {
+    // หมายเหตุ: order.totalAmount ใน DB คือราคาสุทธิหลังหักส่วนลด (และรวมค่าส่งแล้ว)
+    // แต่เราไม่รู้ว่า cartTotal ของสินค้าดิบและส่วนลดเท่าไหร่เพราะ orderItems บันทึกราคาเต็มไว้
+    const subtotalRaw = order.items.reduce((sum, item) => sum + item.priceAtPurchase * item.quantity, 0);
+
+    // คำนวณส่วนลดจาก couponId
+    let discountAmount = 0;
+    let ephemeralStripeCoupon: Stripe.Coupon | undefined;
+
+    if (order.couponId) {
+      // เรียกดูข้อมูล Coupon เพื่อคำนวณส่วนลด
+      // @ts-ignore
+      const coupon = await this.prisma.coupon.findUnique({ where: { id: order.couponId } });
+      if (coupon) {
+        if (coupon.discountType === 'FIXED') {
+          discountAmount = coupon.discountValue;
+        } else {
+          discountAmount = subtotalRaw * (coupon.discountValue / 100);
+          if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) discountAmount = coupon.maxDiscount;
+        }
+        discountAmount = Math.round(discountAmount);
+
+        // สร้าง Stripe Coupon แบบใช้ครั้งเดียว (ephemeral)
+        ephemeralStripeCoupon = await this.stripe.coupons.create({
+          amount_off: discountAmount * 100, // รพบุหน่วยเป็นสตางค์
+          currency: 'thb',
+          duration: 'once',
+          name: coupon.code,
+        });
+      }
+    }
+
+    const shippingFee = order.totalAmount - (subtotalRaw - discountAmount);
+    if (shippingFee > 0 && Math.round(shippingFee) > 0) {
       lineItems.push({
         price_data: {
           currency: 'thb',
@@ -273,7 +324,7 @@ export class OrdersService {
     }
 
     // ตรวจสอบขั้นสุดท้ายเพื่อป้องกันปัญหาทศนิยมปัดเศษ หรือส่วนลดที่อาจทำให้ยอดรวมไม่ตรงกับ Database
-    const calculatedTotal = lineItems.reduce((acc, item) => acc + (item.price_data.unit_amount * item.quantity), 0);
+    const calculatedTotal = lineItems.reduce((acc, item) => acc + (item.price_data.unit_amount * item.quantity), 0) - (discountAmount * 100);
     const expectedTotal = Math.round(order.totalAmount * 100);
 
     if (calculatedTotal !== expectedTotal) {
@@ -292,7 +343,7 @@ export class OrdersService {
     }
 
     try {
-      const session = await this.stripe.checkout.sessions.create({
+      const sessionConfig: Stripe.Checkout.SessionCreateParams = {
         payment_method_types: ['card', 'promptpay'],
         line_items: lineItems,
         mode: 'payment',
@@ -301,7 +352,13 @@ export class OrdersService {
         metadata: {
           orderId: order.id,
         },
-      });
+      };
+
+      if (ephemeralStripeCoupon) {
+        sessionConfig.discounts = [{ coupon: ephemeralStripeCoupon.id }];
+      }
+
+      const session = await this.stripe.checkout.sessions.create(sessionConfig);
 
       // บันทึก Stripe Session ID ลงไปใน Order
       await this.prisma.order.update({

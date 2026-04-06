@@ -14,7 +14,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import {
   ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck,
-  ArrowRight, Truck, Tag, Loader2, User, Phone, Home, Map, Hash, AlertTriangle,
+  ArrowRight, Truck, Tag, Loader2, User, Phone, Home, Map, Hash, AlertTriangle, Percent
 } from 'lucide-react';
 
 // ─── Zod Schema ───
@@ -74,6 +74,11 @@ export default function CheckoutPage() {
   const [paymentMethod, setPaymentMethod] = useState('PromptPay');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [stockErrors, setStockErrors] = useState<string[]>([]);
+  
+  // โค้ดส่วนลด 
+  const [couponCode, setCouponCode] = useState('');
+  const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
+  const [discountInfo, setDiscountInfo] = useState<{ code: string; amount: number; type: string; value: number } | null>(null);
 
   const {
     register,
@@ -102,7 +107,10 @@ export default function CheckoutPage() {
   }, [isClient, isAuthenticated, router]);
 
   const shippingFee = totalPrice >= 1500 ? 0 : 80;
-  const grandTotal = totalPrice + shippingFee;
+  const rawGrandTotal = totalPrice + shippingFee;
+  const grandTotal = discountInfo 
+    ? Math.max(0, rawGrandTotal - discountInfo.amount) 
+    : rawGrandTotal;
 
   // Don't render until hydration
   if (!isClient) return null;
@@ -156,6 +164,35 @@ export default function CheckoutPage() {
     }
   };
 
+  // ─── Coupon Validation ───
+  const applyCoupon = async () => {
+    if (!couponCode.trim()) return;
+    setIsValidatingCoupon(true);
+    try {
+      const res = await api.post('/coupons/validate', {
+        code: couponCode,
+        cartTotal: totalPrice,
+      });
+      setDiscountInfo({
+        code: res.data.code,
+        amount: res.data.discountAmount,
+        type: res.data.discountType,
+        value: res.data.discountValue,
+      });
+      toast.success('ใช้โค้ดส่วนลดสำเร็จ', { description: `ลดไป ฿${res.data.discountAmount.toLocaleString('th-TH')}` });
+    } catch (err: any) {
+      toast.error('ไม่สามารถใช้โค้ดนี้ได้', { description: err?.response?.data?.message || 'รหัสส่วนลดไม่ถูกต้อง' });
+      setDiscountInfo(null);
+    } finally {
+      setIsValidatingCoupon(false);
+    }
+  };
+
+  const removeCoupon = () => {
+    setDiscountInfo(null);
+    setCouponCode('');
+  };
+
   // ─── Submit ───
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
@@ -177,6 +214,7 @@ export default function CheckoutPage() {
       province: data.province,
       postalCode: data.postalCode,
       paymentMethod,
+      couponCode: discountInfo?.code || undefined,
       items: items.map((i) => ({
         productId: i.product.id,
         quantity: i.quantity,
@@ -386,6 +424,47 @@ export default function CheckoutPage() {
                   ))}
                 </div>
 
+                {/* Coupon Section */}
+                <div className="mb-6 pb-6 border-b border-slate-100">
+                  <label className="flex items-center gap-1.5 text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">
+                    <Percent size={13} className="text-slate-400" />
+                    รหัสส่วนลด
+                  </label>
+                  {!discountInfo ? (
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={couponCode}
+                        onChange={(e) => setCouponCode(e.target.value)}
+                        placeholder="กรอกรหัสส่วนลด (ถ้ามี)"
+                        className="flex-1 bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm font-medium focus:ring-4 focus:ring-emerald-500/10 focus:border-[#22C55E] focus:bg-white outline-none transition-all placeholder:text-slate-300"
+                      />
+                      <button
+                        type="button"
+                        onClick={applyCoupon}
+                        disabled={isValidatingCoupon || !couponCode.trim()}
+                        className="px-5 bg-slate-800 hover:bg-slate-900 disabled:bg-slate-300 text-white font-bold rounded-xl transition-all text-sm flex items-center justify-center min-w-[80px]"
+                      >
+                        {isValidatingCoupon ? <Loader2 size={16} className="animate-spin" /> : 'ใช้โค้ด'}
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+                      <div className="flex flex-col">
+                        <span className="text-sm font-black text-emerald-800">{discountInfo.code}</span>
+                        <span className="text-xs text-emerald-600 font-medium">ส่วนลดถูกนำไปใช้แล้ว</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={removeCoupon}
+                        className="text-xs font-bold text-red-500 hover:text-red-700 bg-white px-3 py-1.5 rounded-lg border border-red-100 shadow-sm transition-all"
+                      >
+                        นำออก
+                      </button>
+                    </div>
+                  )}
+                </div>
+
                 {/* Price calculations */}
                 <div className="space-y-3 mb-6 pt-4 border-t border-slate-100 text-sm font-medium text-slate-600">
                   <div className="flex justify-between items-center">
@@ -403,6 +482,14 @@ export default function CheckoutPage() {
                   {shippingFee === 0 && (
                     <div className="text-xs font-bold text-emerald-600 bg-emerald-50 px-3 py-2 rounded-xl flex items-center justify-end gap-1.5 mt-1">
                       <Tag size={12} /> ได้รับสิทธิ์จัดส่งฟรีแล้ว!
+                    </div>
+                  )}
+                  {discountInfo && (
+                    <div className="flex justify-between items-center text-[#22C55E] pt-2">
+                      <span className="font-bold flex items-center gap-1.5">
+                        <Percent size={14} /> ส่วนลดคูปอง ({discountInfo.code})
+                      </span>
+                      <span className="font-black">-฿{discountInfo.amount.toLocaleString('th-TH')}</span>
                     </div>
                   )}
                 </div>

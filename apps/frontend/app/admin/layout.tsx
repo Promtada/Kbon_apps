@@ -31,7 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: <Box size={20} />, label: 'จัดการสินค้า', href: '/admin/products' },
     { icon: <Users size={20} />, label: 'จัดการลูกค้า', href: '/admin/customers' },
     { icon: <ShoppingCart size={20} />, label: 'คำสั่งซื้อ', href: '/admin/orders' },
-    { icon: <Tag size={20} />, label: 'โปรโมชั่น', href: '/admin/promotions' },
+    { icon: <Tag size={20} />, label: 'Coupons / Discounts', href: '/admin/coupons' },
     { icon: <Settings size={20} />, label: 'ตั้งค่าระบบ', href: '/admin/settings' },
   ];
 
