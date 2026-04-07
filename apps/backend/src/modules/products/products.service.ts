@@ -2,6 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
+import { Prisma } from '@prisma/client';
+
+export interface FindAllQuery {
+  search?: string;
+  category?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
+}
 
 @Injectable()
 export class ProductsService {
@@ -27,9 +37,43 @@ export class ProductsService {
     });
   }
 
-  async findAll() {
+  async findAll(query?: FindAllQuery) {
+    const where: Prisma.ProductWhereInput = {};
+
+    if (query?.search) {
+      where.OR = [
+        { name: { contains: query.search, mode: 'insensitive' } },
+        { description: { contains: query.search, mode: 'insensitive' } },
+      ];
+    }
+
+    if (query?.category && query.category !== 'ทั้งหมด') {
+      where.category = query.category;
+    }
+
+    if (query?.minPrice !== undefined || query?.maxPrice !== undefined) {
+      where.price = {};
+      if (query.minPrice !== undefined) {
+        where.price.gte = query.minPrice;
+      }
+      if (query.maxPrice !== undefined) {
+        where.price.lte = query.maxPrice;
+      }
+    }
+
+    let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
+
+    if (query?.sortBy) {
+      if (query.sortBy === 'price') {
+        orderBy = { price: query.sortOrder || 'asc' };
+      } else if (query.sortBy === 'createdAt') {
+        orderBy = { createdAt: query.sortOrder || 'desc' };
+      }
+    }
+
     return this.prisma.product.findMany({
-      orderBy: { createdAt: 'desc' },
+      where,
+      orderBy,
     });
   }
 

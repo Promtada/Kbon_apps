@@ -13,7 +13,22 @@ import {
   ChevronRight,
   ChevronLeft,
   Package,
+  SlidersHorizontal,
+  X,
 } from 'lucide-react';
+
+// ---- Hooks ----------------------------------------------------------------
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+    return () => clearTimeout(handler);
+  }, [value, delay]);
+  return debouncedValue;
+}
 
 // ---- Types ----------------------------------------------------------------
 
@@ -181,8 +196,17 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const debouncedSearchTerm = useDebounce(searchTerm, 500);
+
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
   const [currentPage, setCurrentPage] = useState(1);
+  
+  // Advanced filters
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [minPrice, setMinPrice] = useState<string>('');
+  const [maxPrice, setMaxPrice] = useState<string>('');
+  const [sortBy, setSortBy] = useState<string>('createdAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
   // Restore user session
   useEffect(() => {
@@ -195,43 +219,43 @@ export default function ProductsPage() {
     setIsLoading(true);
     setError(null);
     try {
-      const res = await fetch(`${API_BASE}/products`);
+      const query = new URLSearchParams();
+      if (debouncedSearchTerm) query.append('search', debouncedSearchTerm);
+      if (activeCategory !== 'ทั้งหมด') query.append('category', activeCategory);
+      if (minPrice) query.append('minPrice', minPrice);
+      if (maxPrice) query.append('maxPrice', maxPrice);
+      if (sortBy) {
+        query.append('sortBy', sortBy);
+        query.append('sortOrder', sortOrder);
+      }
+
+      const res = await fetch(`${API_BASE}/products?${query.toString()}`);
       if (!res.ok) throw new Error(`Server responded with ${res.status}`);
       const data: Product[] = await res.json();
       setAllProducts(data.filter((p) => p.isPublished));
+      setCurrentPage(1);
     } catch (err) {
       console.error('Failed to fetch products:', err);
       setError('ไม่สามารถโหลดข้อมูลสินค้าได้ กรุณาลองใหม่ภายหลัง');
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [debouncedSearchTerm, activeCategory, minPrice, maxPrice, sortBy, sortOrder]);
 
   useEffect(() => {
     fetchProducts();
   }, [fetchProducts]);
 
-  // Reset to page 1 whenever filters change
   const handleSearchChange = (value: string) => {
     setSearchTerm(value);
-    setCurrentPage(1);
   };
 
   const handleCategoryChange = (cat: string) => {
     setActiveCategory(cat);
-    setCurrentPage(1);
   };
 
-  // Filter logic
-  const filteredProducts = allProducts.filter((p) => {
-    const matchesCategory = activeCategory === 'ทั้งหมด' || p.category === activeCategory;
-    const matchesSearch =
-      searchTerm === '' ||
-      p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.category.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesCategory && matchesSearch;
-  });
+  // The backend already filters the products for us.
+  const filteredProducts = allProducts;
 
   // Pagination logic
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE);
@@ -319,21 +343,30 @@ export default function ProductsPage() {
               <div className="hidden sm:block w-px h-8 bg-slate-200 flex-shrink-0" />
 
               {/* Category Pills */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 flex-shrink-0" style={{ scrollbarWidth: 'none' }}>
+              <div className="flex items-center gap-2 overflow-x-auto pb-0.5 flex-shrink-0 flex-1 hide-scrollbar" style={{ scrollbarWidth: 'none' }}>
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => handleCategoryChange(cat)}
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 ${
+                    className={`flex-shrink-0 px-4 py-2.5 rounded-full text-xs font-black uppercase tracking-wider transition-all duration-200 ${
                       activeCategory === cat
                         ? 'bg-[#22C55E] text-white shadow-md shadow-[#22C55E]/30 scale-105'
-                        : 'bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
+                        : 'bg-slate-100/80 text-slate-500 hover:bg-slate-200 hover:text-slate-700'
                     }`}
                   >
                     {CATEGORY_LABELS[cat]}
                   </button>
                 ))}
               </div>
+
+              {/* Filter Button */}
+              <button
+                onClick={() => setIsFilterOpen(true)}
+                className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-white border border-slate-200 text-slate-700 font-bold hover:border-[#22C55E] hover:text-[#22C55E] shadow-sm hover:shadow-md transition-all flex-shrink-0"
+              >
+                <SlidersHorizontal size={16} />
+                <span className="hidden sm:inline text-sm">ตัวกรองสินค้า</span>
+              </button>
 
             </div>
           </div>
@@ -402,6 +435,108 @@ export default function ProductsPage() {
 
         </section>
       </main>
+
+      {/* ---- Filter Drawer ---- */}
+      {isFilterOpen && (
+        <div className="fixed inset-0 z-50 flex justify-end">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-[fadeIn_0.3s_ease]"
+            onClick={() => setIsFilterOpen(false)}
+          />
+          
+          {/* Drawer content */}
+          <div className="relative w-full max-w-sm bg-white h-full shadow-2xl flex flex-col animate-[slideLeft_0.3s_ease]">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <h2 className="text-xl font-black text-slate-800 flex items-center gap-2">
+                <SlidersHorizontal size={20} className="text-[#22C55E]" /> ตัวกรองสินค้า
+              </h2>
+              <button onClick={() => setIsFilterOpen(false)} className="p-2 text-slate-400 hover:text-slate-800 bg-slate-50 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              {/* Sort By */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">จัดเรียงตาม</h3>
+                <div className="space-y-3">
+                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="radio" name="sort" 
+                      checked={sortBy === 'createdAt' && sortOrder === 'desc'}
+                      onChange={() => { setSortBy('createdAt'); setSortOrder('desc') }}
+                      className="w-4 h-4 text-[#22C55E] focus:ring-[#22C55E] border-slate-300" 
+                    />
+                    <span className="text-sm font-bold text-slate-700">มาใหม่ล่าสุด</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="radio" name="sort" 
+                      checked={sortBy === 'price' && sortOrder === 'asc'}
+                      onChange={() => { setSortBy('price'); setSortOrder('asc') }}
+                      className="w-4 h-4 text-[#22C55E] focus:ring-[#22C55E] border-slate-300" 
+                    />
+                    <span className="text-sm font-bold text-slate-700">ราคา: ต่ำ - สูง</span>
+                  </label>
+                  <label className="flex items-center gap-3 cursor-pointer p-3 rounded-xl border border-transparent hover:bg-slate-50 transition-colors">
+                    <input 
+                      type="radio" name="sort" 
+                      checked={sortBy === 'price' && sortOrder === 'desc'}
+                      onChange={() => { setSortBy('price'); setSortOrder('desc') }}
+                      className="w-4 h-4 text-[#22C55E] focus:ring-[#22C55E] border-slate-300" 
+                    />
+                    <span className="text-sm font-bold text-slate-700">ราคา: สูง - ต่ำ</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Price Range */}
+              <div>
+                <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">ช่วงราคา (บาท)</h3>
+                <div className="flex items-center gap-3">
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">฿</span>
+                    <input
+                      type="number"
+                      placeholder="ต่ำสุด"
+                      value={minPrice}
+                      onChange={(e) => setMinPrice(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] outline-none transition-all"
+                    />
+                  </div>
+                  <span className="text-slate-300 font-bold">-</span>
+                  <div className="relative flex-1">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-bold">฿</span>
+                    <input
+                      type="number"
+                      placeholder="สูงสุด"
+                      value={maxPrice}
+                      onChange={(e) => setMaxPrice(e.target.value)}
+                      className="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3 text-sm font-bold focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] outline-none transition-all"
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6 border-t border-slate-100 flex gap-3">
+              <button 
+                onClick={() => { setMinPrice(''); setMaxPrice(''); setSortBy('createdAt'); setSortOrder('desc'); }}
+                className="flex-1 py-3.5 bg-slate-100 text-slate-600 font-bold rounded-xl hover:bg-slate-200 transition-all text-sm"
+              >
+                ล้างทั้งหมด
+              </button>
+              <button 
+                onClick={() => setIsFilterOpen(false)}
+                className="flex-[2] py-3.5 bg-[#22C55E] text-white font-black rounded-xl shadow-md shadow-green-200 hover:bg-[#1eb054] transition-all text-sm"
+              >
+                ดูผลลัพธ์
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <Footer />
     </div>
