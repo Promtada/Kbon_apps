@@ -10,6 +10,7 @@ model Address {
   province    String
   postalCode  String
   isDefault   Boolean @default(false)
+  isArchived  Boolean @default(false)
 
   orders Order[]
 

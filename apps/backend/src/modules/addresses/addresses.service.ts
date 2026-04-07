@@ -17,7 +17,7 @@ export class AddressesService {
         });
       } else {
         // If it's their first address, force it to be default
-        const count = await tx.address.count({ where: { userId } });
+        const count = await tx.address.count({ where: { userId, isArchived: false } });
         if (count === 0) {
           createAddressDto.isDefault = true;
         }
@@ -34,14 +34,14 @@ export class AddressesService {
 
   async findAll(userId: string) {
     return this.prisma.address.findMany({
-      where: { userId },
+      where: { userId, isArchived: false },
       orderBy: { createdAt: 'desc' }, // Optional: If you want latest first. Or sort by isDefault
     });
   }
 
   async update(userId: string, id: string, updateAddressDto: UpdateAddressDto) {
     const address = await this.prisma.address.findFirst({
-      where: { id, userId },
+      where: { id, userId, isArchived: false },
     });
 
     if (!address) {
@@ -65,15 +65,16 @@ export class AddressesService {
 
   async remove(userId: string, id: string) {
     const address = await this.prisma.address.findFirst({
-      where: { id, userId },
+      where: { id, userId, isArchived: false },
     });
 
     if (!address) {
       throw new NotFoundException('Address not found');
     }
 
-    return this.prisma.address.delete({
+    return this.prisma.address.update({
       where: { id },
+      data: { isArchived: true, isDefault: false },
     });
   }
 }
