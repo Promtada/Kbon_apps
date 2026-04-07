@@ -5,11 +5,16 @@ model Address {
   fullName    String
   phone       String
   addressLine String
+  subdistrict String? @default("") // Optional initially to avoid breakages during migration
+  district    String? @default("") 
   province    String
   postalCode  String
   isDefault   Boolean @default(false)
 
   orders Order[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt@default(now())
 
   @@index([userId])
 }

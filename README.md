@@ -88,7 +88,7 @@ To test payments and webhooks locally, you must connect the Stripe CLI to your a
 2. **Start the Webhook Listener**
    Forward webhook events to your backend's Stripe webhook endpoint:
    ```bash
-   stripe listen --forward-to localhost:4000/api/orders/webhook
+   .\stripe listen --forward-to localhost:4000/api/orders/webhook
    ```
    *(Make sure to adjust the port or path if your backend is running elsewhere)*
 
@@ -108,7 +108,7 @@ pnpm dev
 ```
 
 - **Frontend** will be available at: `http://localhost:3000`
-- **Backend API** will be available at: `http://localhost:3001`
+- **Backend API** will be available at: `http://localhost:4000`
 
 ---
 

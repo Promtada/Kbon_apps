@@ -13,23 +13,19 @@ import api from '../../lib/axios';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import {
-  ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck,
+  ChevronRight, MapPin, CreditCard, Banknote, ShieldCheck, CheckCircle2, Plus,
   ArrowRight, Truck, Tag, Loader2, User, Phone, Home, Map, Hash, AlertTriangle, Percent
 } from 'lucide-react';
 
 // ─── Zod Schema ───
 const checkoutSchema = z.object({
-  fullName: z.string().min(1, 'กรุณากรอกชื่อผู้รับ'),
-  phone: z
-    .string()
-    .min(1, 'กรุณากรอกเบอร์โทรศัพท์')
-    .regex(/^0\d{8,9}$/, 'เบอร์โทรศัพท์ไม่ถูกต้อง (เช่น 0812345678)'),
-  addressLine: z.string().min(1, 'กรุณากรอกที่อยู่'),
-  province: z.string().min(1, 'กรุณากรอกจังหวัด'),
-  postalCode: z
-    .string()
-    .min(1, 'กรุณากรอกรหัสไปรษณีย์')
-    .regex(/^\d{5}$/, 'รหัสไปรษณีย์ต้องเป็นตัวเลข 5 หลัก'),
+  fullName: z.string().optional(),
+  phone: z.string().optional(),
+  addressLine: z.string().optional(),
+  subdistrict: z.string().optional(),
+  district: z.string().optional(),
+  province: z.string().optional(),
+  postalCode: z.string().optional(),
 });
 
 type CheckoutFormData = z.infer<typeof checkoutSchema>;
@@ -79,6 +75,25 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState('');
   const [isValidatingCoupon, setIsValidatingCoupon] = useState(false);
   const [discountInfo, setDiscountInfo] = useState<{ code: string; amount: number; type: string; value: number } | null>(null);
+
+  // Address Book Logic
+  const [addresses, setAddresses] = useState<any[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>('NEW');
+  const [showAddressList, setShowAddressList] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      api.get('/addresses').then((res) => {
+        setAddresses(res.data);
+        const defaultAddr = res.data.find((a: any) => a.isDefault);
+        if (defaultAddr) {
+          setSelectedAddressId(defaultAddr.id);
+        } else if (res.data.length > 0) {
+          setSelectedAddressId(res.data[0].id);
+        }
+      }).catch(() => {});
+    }
+  }, [isAuthenticated]);
 
   const {
     register,
@@ -197,6 +212,16 @@ export default function CheckoutPage() {
   const onSubmit = async (data: CheckoutFormData) => {
     setIsSubmitting(true);
 
+    if (selectedAddressId === 'NEW') {
+      if (!data.fullName) { toast.error('กรุณากรอกชื่อผู้รับ'); setIsSubmitting(false); return; }
+      if (!data.phone) { toast.error('กรุณากรอกเบอร์โทรศัพท์'); setIsSubmitting(false); return; }
+      if (!data.addressLine) { toast.error('กรุณากรอกที่อยู่'); setIsSubmitting(false); return; }
+      if (!data.province) { toast.error('กรุณากรอกจังหวัด'); setIsSubmitting(false); return; }
+      if (!data.postalCode) { toast.error('กรุณากรอกรหัสไปรษณีย์'); setIsSubmitting(false); return; }
+    } else if (!selectedAddressId) {
+      toast.error('กรุณาเลือกที่อยู่จัดส่ง'); setIsSubmitting(false); return;
+    }
+
     // Frontend stock pre-check
     const stockOk = await preCheckStock();
     if (!stockOk) {
@@ -208,9 +233,12 @@ export default function CheckoutPage() {
     }
 
     const payload = {
+      addressId: selectedAddressId !== 'NEW' ? selectedAddressId : undefined,
       fullName: data.fullName,
       phone: data.phone,
       addressLine: data.addressLine,
+      subdistrict: data.subdistrict,
+      district: data.district,
       province: data.province,
       postalCode: data.postalCode,
       paymentMethod,
@@ -302,53 +330,138 @@ export default function CheckoutPage() {
 
               {/* 1. Address Section */}
               <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm">
-                <h2 className="text-lg font-black text-slate-800 flex items-center gap-3 mb-6">
-                  <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
-                    <MapPin size={20} />
-                  </div>
-                  ที่อยู่จัดส่งของคุณ
-                </h2>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                  <FormInput
-                    label="ชื่อผู้รับ"
-                    icon={User}
-                    placeholder="ชื่อ-นามสกุล"
-                    error={errors.fullName?.message}
-                    {...register('fullName')}
-                  />
-                  <FormInput
-                    label="เบอร์โทรศัพท์"
-                    icon={Phone}
-                    type="tel"
-                    placeholder="0812345678"
-                    error={errors.phone?.message}
-                    {...register('phone')}
-                  />
-                  <div className="md:col-span-2">
-                    <FormInput
-                      label="ที่อยู่"
-                      icon={Home}
-                      placeholder="บ้านเลขที่, ถนน, ซอย, ตำบล/แขวง, อำเภอ/เขต"
-                      error={errors.addressLine?.message}
-                      {...register('addressLine')}
-                    />
-                  </div>
-                  <FormInput
-                    label="จังหวัด"
-                    icon={Map}
-                    placeholder="กรุงเทพมหานคร"
-                    error={errors.province?.message}
-                    {...register('province')}
-                  />
-                  <FormInput
-                    label="รหัสไปรษณีย์"
-                    icon={Hash}
-                    placeholder="10110"
-                    error={errors.postalCode?.message}
-                    {...register('postalCode')}
-                  />
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-lg font-black text-slate-800 flex items-center gap-3">
+                    <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center text-[#22C55E]">
+                      <MapPin size={20} />
+                    </div>
+                    ที่อยู่จัดส่ง
+                  </h2>
+                  {addresses.length > 0 && selectedAddressId !== 'NEW' && (
+                    <button
+                      type="button"
+                      onClick={() => setShowAddressList(!showAddressList)}
+                      className="text-sm font-bold text-[#22C55E] hover:text-[#1eb054]"
+                    >
+                      {showAddressList ? 'ปิดรายการ' : 'เปลี่ยนที่อยู่'}
+                    </button>
+                  )}
                 </div>
+
+                {addresses.length > 0 && selectedAddressId !== 'NEW' && !showAddressList ? (
+                  <div className="bg-slate-50 border border-slate-200 rounded-2xl p-5 mb-4 relative cursor-pointer hover:border-[#22C55E] transition-all" onClick={() => setShowAddressList(true)}>
+                    <div className="absolute top-4 right-4"><CheckCircle2 size={24} className="text-[#22C55E]" /></div>
+                    {(() => {
+                       const addr = addresses.find(a => a.id === selectedAddressId);
+                       if (!addr) return null;
+                       return (
+                         <div className="pr-8">
+                           <p className="font-black text-slate-800 mb-1">{addr.fullName} <span className="text-slate-500 font-medium text-sm">({addr.phone})</span></p>
+                           <p className="text-sm text-slate-600 leading-relaxed">
+                             {addr.addressLine}
+                             {addr.subdistrict && ` ต.${addr.subdistrict}`}
+                             {addr.district && ` อ.${addr.district}`}
+                             <br />
+                             จ.{addr.province} {addr.postalCode}
+                           </p>
+                         </div>
+                       )
+                    })()}
+                  </div>
+                ) : null}
+
+                {showAddressList && selectedAddressId !== 'NEW' && (
+                   <div className="space-y-3 mb-6 animate-[fadeIn_0.2s_ease]">
+                     {addresses.map(addr => (
+                        <div 
+                           key={addr.id}
+                           onClick={() => { setSelectedAddressId(addr.id); setShowAddressList(false); }}
+                           className={`cursor-pointer bg-white border-2 rounded-2xl p-4 transition-all ${
+                             selectedAddressId === addr.id ? 'border-[#22C55E] shadow-sm shadow-emerald-50' : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
+                           }`}
+                        >
+                           <p className="font-black text-slate-800 mb-1 flex items-center justify-between">
+                              <span>{addr.fullName} <span className="text-slate-500 font-medium text-[11px] ml-1">({addr.phone})</span></span>
+                              {selectedAddressId === addr.id && <CheckCircle2 size={18} className="text-[#22C55E]" />}
+                           </p>
+                           <p className="text-sm text-slate-600 truncate">
+                             {addr.addressLine} จ.{addr.province} {addr.postalCode}
+                           </p>
+                        </div>
+                     ))}
+                     <button
+                       type="button"
+                       onClick={() => { setSelectedAddressId('NEW'); setShowAddressList(false); }}
+                       className="w-full py-4 border-2 border-dashed border-[#22C55E]/30 text-[#22C55E] rounded-2xl font-bold hover:bg-emerald-50 transition-all flex items-center justify-center gap-2"
+                     >
+                        <Plus size={18} /> เพิ่มที่อยู่ใหม่และดำเนินการต่อ
+                     </button>
+                   </div>
+                )}
+
+                {selectedAddressId === 'NEW' && (
+                  <div className="space-y-4 animate-[fadeIn_0.2s_ease]">
+                    {addresses.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => setSelectedAddressId(addresses[0].id)}
+                        className="text-[13px] font-bold text-slate-500 hover:text-slate-800 flex items-center gap-1 mb-2 bg-slate-100 px-3 py-1.5 rounded-lg w-fit"
+                      >
+                         กลับไปเลือกที่อยู่เดิม
+                      </button>
+                    )}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormInput
+                        label="ชื่อผู้รับ"
+                        icon={User}
+                        placeholder="ชื่อ-นามสกุล"
+                        error={errors.fullName?.message}
+                        {...register('fullName')}
+                      />
+                      <FormInput
+                        label="เบอร์โทรศัพท์"
+                        icon={Phone}
+                        type="tel"
+                        placeholder="0812345678"
+                        error={errors.phone?.message}
+                        {...register('phone')}
+                      />
+                      <div className="md:col-span-2">
+                        <FormInput
+                          label="ที่อยู่"
+                          icon={Home}
+                          placeholder="บ้านเลขที่, ถนน, ซอย"
+                          error={errors.addressLine?.message}
+                          {...register('addressLine')}
+                        />
+                      </div>
+                      <FormInput
+                        label="ตำบล/แขวง (ถ้ามี)"
+                        icon={MapPin}
+                        {...register('subdistrict')}
+                      />
+                      <FormInput
+                        label="อำเภอ/เขต (ถ้ามี)"
+                        icon={MapPin}
+                        {...register('district')}
+                      />
+                      <FormInput
+                        label="จังหวัด"
+                        icon={Map}
+                        placeholder="กรุงเทพมหานคร"
+                        error={errors.province?.message}
+                        {...register('province')}
+                      />
+                      <FormInput
+                        label="รหัสไปรษณีย์"
+                        icon={Hash}
+                        placeholder="10110"
+                        error={errors.postalCode?.message}
+                        {...register('postalCode')}
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* 2. Payment Section */}

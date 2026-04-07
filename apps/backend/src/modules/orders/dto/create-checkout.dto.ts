@@ -16,26 +16,38 @@ class CheckoutItemDto {
 }
 
 export class CreateCheckoutDto {
+  @IsOptional()
+  @IsString()
+  addressId?: string;
+
   // ---- Shipping Address (inline) ----
   @IsString()
-  @IsNotEmpty({ message: 'กรุณากรอกชื่อผู้รับ' })
-  fullName: string;
+  @IsOptional()
+  fullName?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'กรุณากรอกเบอร์โทรศัพท์' })
-  phone: string;
+  @IsOptional()
+  phone?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'กรุณากรอกที่อยู่' })
-  addressLine: string;
+  @IsOptional()
+  addressLine?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'กรุณากรอกจังหวัด' })
-  province: string;
+  @IsOptional()
+  subdistrict?: string;
 
   @IsString()
-  @IsNotEmpty({ message: 'กรุณากรอกรหัสไปรษณีย์' })
-  postalCode: string;
+  @IsOptional()
+  district?: string;
+
+  @IsString()
+  @IsOptional()
+  province?: string;
+
+  @IsString()
+  @IsOptional()
+  postalCode?: string;
 
   // ---- Payment ----
   @IsString()

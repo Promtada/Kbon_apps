@@ -189,30 +189,60 @@ export class OrdersService {
 
     // 3. ทำทุกอย่างใน Transaction เพื่อความปลอดภัย
     return this.prisma.$transaction(async (tx) => {
-      // 3a. สร้าง Address
-      const address = await tx.address.create({
-        data: {
-          userId,
+      // 3a. ค้นหาที่อยู่เดิมหรือสร้างใหม่
+      let chosenAddressId = dto.addressId;
+      let addressSnapshotData: any = {};
+
+      if (chosenAddressId) {
+        const existingAddress = await tx.address.findFirst({
+          where: { id: chosenAddressId, userId },
+        });
+        if (!existingAddress) {
+          throw new BadRequestException('ไม่พบข้อมูลที่อยู่จัดส่งที่เลือก');
+        }
+        addressSnapshotData = {
+          fullName: existingAddress.fullName,
+          phone: existingAddress.phone,
+          addressLine: existingAddress.addressLine,
+          subdistrict: existingAddress.subdistrict,
+          district: existingAddress.district,
+          province: existingAddress.province,
+          postalCode: existingAddress.postalCode,
+        };
+      } else {
+        if (!dto.fullName || !dto.phone || !dto.addressLine || !dto.province || !dto.postalCode) {
+           throw new BadRequestException('กรุณากรอกข้อมูลที่อยู่จัดส่งให้ครบถ้วน');
+        }
+        const address = await tx.address.create({
+          data: {
+            userId,
+            fullName: dto.fullName,
+            phone: dto.phone,
+            addressLine: dto.addressLine,
+            subdistrict: dto.subdistrict || "",
+            district: dto.district || "",
+            province: dto.province,
+            postalCode: dto.postalCode,
+          },
+        });
+        chosenAddressId = address.id;
+        addressSnapshotData = {
           fullName: dto.fullName,
           phone: dto.phone,
           addressLine: dto.addressLine,
+          subdistrict: dto.subdistrict || "",
+          district: dto.district || "",
           province: dto.province,
           postalCode: dto.postalCode,
-        },
-      });
+        };
+      }
 
       // 3b. สร้าง Order + OrderItems
       const order = await tx.order.create({
         data: {
           userId,
-          addressId: address.id,
-          shippingAddressSnapshot: JSON.stringify({
-            fullName: dto.fullName,
-            phone: dto.phone,
-            addressLine: dto.addressLine,
-            province: dto.province,
-            postalCode: dto.postalCode,
-          }),
+          addressId: chosenAddressId,
+          shippingAddressSnapshot: JSON.stringify(addressSnapshotData),
           totalAmount,
           paymentMethod: dto.paymentMethod,
           paymentStatus: 'UNPAID',
