@@ -63,6 +63,7 @@ export class ReviewsService {
       where: {
         userId,
         status: 'DELIVERED',
+        isReceivedByUser: true,
         items: { some: { productId } },
       },
       select: { id: true },

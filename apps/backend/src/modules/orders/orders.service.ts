@@ -156,13 +156,13 @@ export class OrdersService {
     if (existing.userId !== userId) {
       throw new BadRequestException('คุณไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้');
     }
-    if (existing.status !== 'SHIPPED') {
-      throw new BadRequestException('สามารถยืนยันการรับสินค้าได้เฉพาะคำสั่งซื้อที่อยู่ระหว่างจัดส่งเท่านั้น');
+    if (existing.status !== 'DELIVERED') {
+      throw new BadRequestException('สามารถทำการยืนยันสิทธิชัยได้เฉพาะคำสั่งซื้อที่จัดส่งสำเร็จแล้วเท่านั้น');
     }
 
     return this.prisma.order.update({
       where: { id },
-      data: { status: 'DELIVERED' }
+      data: { isReceivedByUser: true }
     });
   }
 

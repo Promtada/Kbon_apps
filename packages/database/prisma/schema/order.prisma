@@ -56,6 +56,7 @@ model Order {
   user        User        @relation(fields: [userId], references: [id])
   totalAmount Float
   status      OrderStatus @default(PENDING)
+  isReceivedByUser Boolean @default(false)
 
   addressId               String
   shippingAddress         Address @relation(fields: [addressId], references: [id])

@@ -44,6 +44,7 @@ interface Order {
   } | null;
   createdAt: string;
   updatedAt: string;
+  isReceivedByUser: boolean;
 }
 
 // ─── Status config ───
@@ -85,8 +86,27 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bg: string; 
   },
 };
 
-function getStatusConfig(status: string) {
-  return STATUS_CONFIG[status] || STATUS_CONFIG.PENDING;
+function getStatusConfig(order: Order) {
+  if (order.status === 'DELIVERED') {
+    if (!order.isReceivedByUser) {
+      return {
+        label: 'จัดส่งถึงแล้ว (รอผู้ซื้อยืนยัน)',
+        color: 'text-amber-700',
+        bg: 'bg-amber-50',
+        border: 'border-amber-200',
+        icon: <Package size={13} strokeWidth={2.5} />,
+      };
+    } else {
+      return {
+        label: 'สำเร็จ',
+        color: 'text-emerald-700',
+        bg: 'bg-emerald-50',
+        border: 'border-emerald-200',
+        icon: <CheckCircle2 size={13} strokeWidth={2.5} />,
+      };
+    }
+  }
+  return STATUS_CONFIG[order.status] || STATUS_CONFIG.PENDING;
 }
 
 function formatDate(dateStr: string) {
@@ -255,7 +275,7 @@ function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
-  const status = getStatusConfig(order.status);
+  const status = getStatusConfig(order);
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
   // ─── Pay Now Logic ───
@@ -408,6 +428,31 @@ function OrderCard({ order }: { order: Order }) {
               </button>
             )}
 
+            {/* Confirm Receipt Button (if DELIVERED and not confirmed) */}
+            {order.status === 'DELIVERED' && !order.isReceivedByUser && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleConfirmReceipt();
+                }}
+                disabled={isConfirming}
+                className="flex items-center gap-1.5 px-4 py-2 bg-[#22C55E] hover:bg-[#1eb054] text-white text-xs font-black rounded-xl shadow-md transition-all disabled:opacity-70 disabled:cursor-not-allowed active:scale-[0.98]"
+              >
+                {isConfirming ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                ฉันได้รับสินค้าแล้ว
+              </button>
+            )}
+
+            {/* Write Review Link (if DELIVERED and confirmed) */}
+            {order.status === 'DELIVERED' && order.isReceivedByUser && order.items.length > 0 && (
+              <Link
+                href={`/products/${order.items[0].product.id}#reviews`}
+                className="flex items-center gap-1.5 px-4 py-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-600 text-xs font-black rounded-xl transition-all"
+              >
+                ไปเขียนรีวิวสินค้า <ArrowRight size={14} />
+              </Link>
+            )}
+
             {/* Expand/collapse toggle */}
             <button
               onClick={() => setExpanded(!expanded)}
@@ -451,7 +496,7 @@ function OrderCard({ order }: { order: Order }) {
                   <p className="text-sm font-black text-slate-700">
                     ฿{(item.priceAtPurchase * item.quantity).toLocaleString('th-TH')}
                   </p>
-                  {order.status === 'SHIPPED' && (
+                  {order.status === 'DELIVERED' && !order.isReceivedByUser && (
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -461,10 +506,10 @@ function OrderCard({ order }: { order: Order }) {
                       className="text-[11px] font-bold bg-[#22C55E] text-white px-3 py-1.5 rounded-lg shadow-sm shadow-[#22C55E]/20 hover:bg-[#1eb054] transition-all disabled:opacity-50 flex items-center gap-1"
                     >
                       {isConfirming ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
-                      ได้รับสินค้าแล้ว
+                      ฉันได้รับสินค้าแล้ว
                     </button>
                   )}
-                  {order.status === 'DELIVERED' && (
+                  {order.status === 'DELIVERED' && order.isReceivedByUser && (
                     <Link
                       href={`/products/${item.product.id}#reviews`}
                       className="text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
