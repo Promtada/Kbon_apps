@@ -251,10 +251,10 @@ function PageHeader({ count, loading }: { count: number; loading?: boolean }) {
   );
 }
 
-// ─── Order Card ───
 function OrderCard({ order }: { order: Order }) {
   const [expanded, setExpanded] = useState(false);
   const [isPaying, setIsPaying] = useState(false);
+  const [isConfirming, setIsConfirming] = useState(false);
   const status = getStatusConfig(order.status);
   const itemCount = order.items.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -275,6 +275,20 @@ function OrderCard({ order }: { order: Order }) {
         },
       }
     );
+  };
+
+  // ─── Confirm Receipt Logic ───
+  const handleConfirmReceipt = async () => {
+    if (!window.confirm('ยืนยันว่าคุณได้รับสินค้าครบถ้วนแล้ว?')) return;
+    setIsConfirming(true);
+    try {
+      await api.patch(`/orders/${order.id}/confirm-receipt`);
+      toast.success('ยืนยันการรับสินค้าสำเร็จ', { description: 'ขอบคุณที่ใช้บริการ Kbon Hydroponics' });
+      window.location.reload();
+    } catch (err: any) {
+      toast.error('ไม่สามารถยืนยันการรับสินค้าได้', { description: err?.response?.data?.message ?? err.message });
+      setIsConfirming(false);
+    }
   };
 
   // Parse shipping address
@@ -433,9 +447,32 @@ function OrderCard({ order }: { order: Order }) {
                     ฿{item.priceAtPurchase.toLocaleString('th-TH')} × {item.quantity}
                   </p>
                 </div>
-                <p className="text-sm font-black text-slate-700">
-                  ฿{(item.priceAtPurchase * item.quantity).toLocaleString('th-TH')}
-                </p>
+                <div className="flex flex-col items-end gap-2">
+                  <p className="text-sm font-black text-slate-700">
+                    ฿{(item.priceAtPurchase * item.quantity).toLocaleString('th-TH')}
+                  </p>
+                  {order.status === 'SHIPPED' && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirmReceipt();
+                      }}
+                      disabled={isConfirming}
+                      className="text-[11px] font-bold bg-[#22C55E] text-white px-3 py-1.5 rounded-lg shadow-sm shadow-[#22C55E]/20 hover:bg-[#1eb054] transition-all disabled:opacity-50 flex items-center gap-1"
+                    >
+                      {isConfirming ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle2 size={12} />}
+                      ได้รับสินค้าแล้ว
+                    </button>
+                  )}
+                  {order.status === 'DELIVERED' && (
+                    <Link
+                      href={`/products/${item.product.id}#reviews`}
+                      className="text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100 hover:bg-emerald-100 px-3 py-1.5 rounded-lg transition-all flex items-center gap-1"
+                    >
+                      ไปเขียนรีวิว <ArrowRight size={12} />
+                    </Link>
+                  )}
+                </div>
               </div>
             ))}
           </div>

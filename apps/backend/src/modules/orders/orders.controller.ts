@@ -48,6 +48,14 @@ export class OrdersController {
     return this.ordersService.findMyOrders(req.user.id);
   }
 
+  // --- 🌟 ยืนยันการรับสินค้า ---
+  @Patch(':id/confirm-receipt')
+  @UseGuards(JwtAuthGuard)
+  async confirmReceipt(@Param('id') id: string, @Req() req) {
+    const order = await this.ordersService.confirmReceipt(id, req.user.id);
+    return { success: true, order };
+  }
+
   // --- 🌟 Admin: อัปเดตสถานะคำสั่งซื้อ ---
   @Patch(':id/status')
   @UseGuards(JwtAuthGuard, RolesGuard)

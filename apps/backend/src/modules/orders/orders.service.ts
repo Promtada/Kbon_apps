@@ -147,6 +147,25 @@ export class OrdersService {
     });
   }
 
+  // --- 🌟 User: ยืนยันการรับสินค้า ---
+  async confirmReceipt(id: string, userId: string) {
+    const existing = await this.prisma.order.findUnique({ where: { id } });
+    if (!existing) {
+      throw new NotFoundException(`ไม่พบคำสั่งซื้อ ${id}`);
+    }
+    if (existing.userId !== userId) {
+      throw new BadRequestException('คุณไม่มีสิทธิ์เข้าถึงคำสั่งซื้อนี้');
+    }
+    if (existing.status !== 'SHIPPED') {
+      throw new BadRequestException('สามารถยืนยันการรับสินค้าได้เฉพาะคำสั่งซื้อที่อยู่ระหว่างจัดส่งเท่านั้น');
+    }
+
+    return this.prisma.order.update({
+      where: { id },
+      data: { status: 'DELIVERED' }
+    });
+  }
+
   // --- 🌟 Checkout ที่ปลอดภัย: ใช้ userId จาก JWT ---
   async createCheckout(userId: string, dto: CreateCheckoutDto) {
     // 1. ตรวจสอบสินค้าทุกชิ้น (stock + existence)
