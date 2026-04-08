@@ -1,16 +1,19 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
   Delete,
   Param,
   Body,
+  Req,
   UseGuards,
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
 import { ReviewsService } from './reviews.service';
 import { UpdateReviewStatusDto } from './dto/update-review-status.dto';
+import { CreateReviewDto } from './dto/create-review.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -37,6 +40,29 @@ export class ReviewsController {
   @Get('products/:productId/reviews')
   findApprovedByProduct(@Param('productId') productId: string) {
     return this.reviewsService.findApprovedByProduct(productId);
+  }
+
+  // ─── AUTHENTICATED USER ──────────────────────────────────────────────────────
+
+  /**
+   * GET /reviews/eligibility/:productId
+   * Returns { eligible: boolean, reason?: string } for the current user.
+   */
+  @Get('reviews/eligibility/:productId')
+  @UseGuards(JwtAuthGuard)
+  checkEligibility(@Req() req: any, @Param('productId') productId: string) {
+    return this.reviewsService.checkEligibility(req.user.id, productId);
+  }
+
+  /**
+   * POST /reviews
+   * Creates a new review from a verified buyer. Auto-approved.
+   */
+  @Post('reviews')
+  @UseGuards(JwtAuthGuard)
+  @HttpCode(HttpStatus.CREATED)
+  createReview(@Req() req: any, @Body() dto: CreateReviewDto) {
+    return this.reviewsService.createReview(req.user.id, dto);
   }
 
   // ─── ADMIN ──────────────────────────────────────────────────────────────────

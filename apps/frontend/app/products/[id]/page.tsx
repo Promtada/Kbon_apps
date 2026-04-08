@@ -1,12 +1,14 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Navbar from '../../components/Navbar';
 import { useCart } from '../../../store/useCartStore';
 import Footer from '../../components/Footer';
 import { STORAGE_KEYS } from '../../../lib/storageKeys';
+import { toast, Toaster } from 'sonner';
+import Cookies from 'js-cookie';
 import {
   ChevronRight,
   ShoppingCart,
@@ -24,6 +26,7 @@ import {
   Package,
   Zap,
   Check,
+  Send,
 } from 'lucide-react';
 
 // ---- Types ----------------------------------------------------------------
@@ -257,6 +260,183 @@ function TechSpecs({ specs }: { specs: TechSpec[] }) {
   );
 }
 
+// ---- WriteReview -----------------------------------------------------------
+
+type EligibilityState = 'checking' | 'eligible' | 'ineligible' | 'already_reviewed' | 'unauthenticated';
+
+function WriteReview({
+  productId,
+  onSuccess,
+}: {
+  productId: string;
+  onSuccess: () => void;
+}) {
+  const [eligibility, setEligibility] = useState<EligibilityState>('checking');
+  const [hoveredStar, setHoveredStar] = useState(0);
+  const [rating, setRating] = useState(0);
+  const [comment, setComment] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useEffect(() => {
+    const token = Cookies.get('access_token');
+    if (!token) {
+      setEligibility('unauthenticated');
+      return;
+    }
+    fetch(`${API_BASE}/reviews/eligibility/${productId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.eligible) {
+          setEligibility('eligible');
+        } else if (data.reason === 'already_reviewed') {
+          setEligibility('already_reviewed');
+        } else {
+          setEligibility('ineligible');
+        }
+      })
+      .catch(() => setEligibility('ineligible'));
+  }, [productId]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (rating === 0) {
+      toast.error('กรุณาเลือกคะแนนก่อน');
+      return;
+    }
+    const token = Cookies.get('access_token');
+    if (!token) return;
+
+    setIsSubmitting(true);
+    try {
+      const res = await fetch(`${API_BASE}/reviews`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ productId, rating, comment: comment.trim() || undefined }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message ?? 'เกิดข้อผิดพลาด');
+      }
+
+      toast.success('ขอบคุณสำหรับรีวิว! 🌿', {
+        description: 'รีวิวของคุณแสดงบนหน้าสินค้าแล้ว',
+      });
+      setEligibility('already_reviewed');
+      setRating(0);
+      setComment('');
+      onSuccess();
+    } catch (err: any) {
+      toast.error('ส่งรีวิวไม่สำเร็จ', { description: err.message });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Don't render anything while checking or if not authenticated / ineligible
+  if (eligibility === 'checking') return null;
+  if (eligibility === 'unauthenticated') return null;
+  if (eligibility === 'ineligible') return null;
+
+  return (
+    <section className="py-8 px-6 max-w-3xl mx-auto">
+      <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8">
+        {eligibility === 'already_reviewed' ? (
+          /* Already submitted state */
+          <div className="flex flex-col items-center gap-3 py-4 text-center">
+            <div className="w-14 h-14 rounded-full bg-emerald-50 flex items-center justify-center">
+              <CheckCircle2 size={28} className="text-[#22C55E]" />
+            </div>
+            <p className="font-black text-slate-800 text-lg">คุณได้รีวิวสินค้านี้แล้ว</p>
+            <p className="text-sm text-slate-400 font-medium">ขอบคุณสำหรับความคิดเห็นของคุณ</p>
+          </div>
+        ) : (
+          /* Write form */
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <h3 className="text-xl font-black text-slate-800 tracking-tight">เขียนรีวิวสินค้า</h3>
+              <p className="text-xs text-slate-400 font-medium mt-1">
+                ในฐานะผู้ซื้อที่ผ่านการยืนยัน
+                <span className="ml-1.5 inline-flex items-center gap-1 bg-emerald-50 text-[#22C55E] text-[10px] font-bold px-2 py-0.5 rounded-full">
+                  <CheckCircle2 size={9} strokeWidth={2.5} /> Verified Buyer
+                </span>
+              </p>
+            </div>
+
+            {/* Star rating picker */}
+            <div>
+              <p className="text-xs font-black uppercase tracking-wider text-slate-400 mb-3">คะแนนของคุณ</p>
+              <div className="flex gap-2">
+                {[1, 2, 3, 4, 5].map((s) => (
+                  <button
+                    key={s}
+                    type="button"
+                    onClick={() => setRating(s)}
+                    onMouseEnter={() => setHoveredStar(s)}
+                    onMouseLeave={() => setHoveredStar(0)}
+                    className="p-1.5 rounded-xl transition-transform hover:scale-125 focus:outline-none"
+                    aria-label={`${s} ดาว`}
+                  >
+                    <Star
+                      size={28}
+                      className={
+                        s <= (hoveredStar || rating)
+                          ? 'text-amber-400 fill-amber-400'
+                          : 'text-slate-200 fill-slate-200'
+                      }
+                    />
+                  </button>
+                ))}
+                {rating > 0 && (
+                  <span className="ml-1 self-center text-xs font-bold text-slate-400">
+                    {['', 'แย่มาก', 'แย่', 'พอใช้', 'ดี', 'ยอดเยี่ยม'][rating]}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Comment textarea */}
+            <div>
+              <label className="block text-xs font-black uppercase tracking-wider text-slate-400 mb-2">
+                ความคิดเห็น <span className="normal-case font-medium">(ไม่บังคับ)</span>
+              </label>
+              <textarea
+                rows={4}
+                placeholder="บอกเล่าประสบการณ์การใช้งานของคุณ..."
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                maxLength={1000}
+                className="w-full bg-slate-50 border-2 border-slate-100 rounded-2xl px-5 py-4 text-sm font-medium text-slate-700 placeholder:text-slate-300 focus:border-[#22C55E] focus:ring-8 focus:ring-[#22C55E]/5 outline-none transition-all resize-none"
+              />
+              <p className="text-right text-[11px] text-slate-300 font-medium mt-1">
+                {comment.length}/1000
+              </p>
+            </div>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || rating === 0}
+              className="flex items-center justify-center gap-2 w-full bg-[#22C55E] text-white font-black py-4 rounded-2xl shadow-lg shadow-green-100 hover:bg-[#1eb054] hover:-translate-y-0.5 active:scale-[0.98] transition-all text-sm uppercase tracking-widest disabled:bg-slate-200 disabled:shadow-none disabled:translate-y-0 disabled:text-slate-400"
+            >
+              {isSubmitting ? (
+                <Loader2 size={16} className="animate-spin" />
+              ) : (
+                <Send size={15} />
+              )}
+              {isSubmitting ? 'กำลังส่ง...' : 'ส่งรีวิว'}
+            </button>
+          </form>
+        )}
+      </div>
+    </section>
+  );
+}
+
 // ---- ProductReviews (self-fetching) ----------------------------------------
 
 function StarRow({ filled, size = 16 }: { filled: boolean; size?: number }) {
@@ -268,17 +448,28 @@ function StarRow({ filled, size = 16 }: { filled: boolean; size?: number }) {
   );
 }
 
-function ProductReviews({ productId }: { productId: string }) {
+function ProductReviews({
+  productId,
+  refreshSignal = 0,
+}: {
+  productId: string;
+  refreshSignal?: number;
+}) {
   const [reviews, setReviews] = useState<ProductReview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
+  const loadReviews = useCallback(() => {
+    setIsLoading(true);
     fetch(`${API_BASE}/products/${productId}/reviews`)
       .then((r) => (r.ok ? r.json() : []))
       .then((data) => setReviews(Array.isArray(data) ? data : []))
       .catch(() => setReviews([]))
       .finally(() => setIsLoading(false));
   }, [productId]);
+
+  useEffect(() => {
+    loadReviews();
+  }, [loadReviews, refreshSignal]);
 
   if (isLoading) {
     return (
@@ -294,7 +485,23 @@ function ProductReviews({ productId }: { productId: string }) {
     );
   }
 
-  if (reviews.length === 0) return null;
+  if (reviews.length === 0) {
+    return (
+      <section className="py-16 px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">รีวิวจากลูกค้า</h2>
+          <div className="w-16 h-1.5 bg-[#22C55E] rounded-full mx-auto mt-4" />
+        </div>
+        <div className="max-w-md mx-auto text-center py-12 px-6 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm">
+          <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-5">
+            <Leaf size={28} className="text-slate-300" />
+          </div>
+          <p className="font-black text-slate-700 text-lg mb-2">ยังไม่มีรีวิวสำหรับสินค้านี้</p>
+          <p className="text-sm text-slate-400 font-medium">เป็นคนแรกที่แชร์กประสบการณ์!</p>
+        </div>
+      </section>
+    );
+  }
 
   // ── Derived stats ──────────────────────────────────────────────────────────
   const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
@@ -417,6 +624,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   const [error, setError] = useState<string | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [addedToCart, setAddedToCart] = useState(false);
+  const [reviewRefreshKey, setReviewRefreshKey] = useState(0);
 
   // Restore user session
   useEffect(() => {
@@ -549,7 +757,9 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
   // ---- Main render ----
   return (
     <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900">
+      <Toaster position="top-center" richColors />
       <Navbar user={user} />
+
 
       <main className="flex-grow">
 
@@ -769,7 +979,13 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {product.techSpecs && <TechSpecs specs={product.techSpecs} />}
 
         {/* ===================== Reviews ===================== */}
-        <ProductReviews productId={id} />
+        {/* WriteReview: silently hidden for non-buyers; visible for verified buyers */}
+        <WriteReview
+          productId={id}
+          onSuccess={() => setReviewRefreshKey((k) => k + 1)}
+        />
+        {/* ProductReviews: always visible — shows empty state or list */}
+        <ProductReviews productId={id} refreshSignal={reviewRefreshKey} />
 
         {/* ===================== Related / Extra info section ===================== */}
         <section className="bg-white border-t border-slate-100 py-16 px-6 mt-8">
