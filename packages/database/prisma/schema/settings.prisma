@@ -1,0 +1,44 @@
+model SystemSetting {
+  id             String       @id @default("global")
+  adminName      String?
+  adminAvatarUrl String?
+  mainHeadline   String?      @db.Text
+  subHeadline    String?      @db.Text
+  heroMediaUrl   String?
+  bannerEnabled  Boolean      @default(false)
+  
+  banners        SiteBanner[]
+  testimonials   Testimonial[]
+  
+  updatedAt      DateTime     @updatedAt
+}
+
+model SiteBanner {
+  id              String        @id @default(cuid())
+  imageUrl        String
+  targetUrl       String?
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  
+  systemSettingId String
+  systemSetting   SystemSetting @relation(fields: [systemSettingId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+model Testimonial {
+  id              String        @id @default(cuid())
+  authorName      String
+  authorRole      String?
+  content         String        @db.Text
+  avatarUrl       String?
+  isActive        Boolean       @default(true)
+  sortOrder       Int           @default(0)
+  
+  systemSettingId String
+  systemSetting   SystemSetting @relation(fields: [systemSettingId], references: [id], onDelete: Cascade)
+  
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}

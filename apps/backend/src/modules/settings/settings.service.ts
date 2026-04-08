@@ -7,26 +7,85 @@ export class SettingsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async findAll() {
-    const settings = await this.prisma.systemSetting.findMany();
-    // Return as a key-value object for easy frontend usage
-    return settings.reduce((acc, curr) => {
-      acc[curr.key] = curr.value;
-      return acc;
-    }, {} as Record<string, string>);
+    let settings = await this.prisma.systemSetting.findUnique({
+      where: { id: 'global' },
+      include: {
+        banners: {
+          orderBy: { sortOrder: 'asc' }
+        },
+        testimonials: {
+          orderBy: { sortOrder: 'asc' }
+        }
+      }
+    });
+
+    if (!settings) {
+      settings = await this.prisma.systemSetting.create({
+        data: { id: 'global' },
+        include: { banners: true, testimonials: true }
+      });
+    }
+
+    return settings;
   }
 
   async upsertMany(dto: UpsertSettingsDto) {
-    const results = [];
-    // Using transaction for safe atomic updates
-    await this.prisma.$transaction(
-      dto.settings.map((item) =>
-        this.prisma.systemSetting.upsert({
-          where: { key: item.key },
-          update: { value: item.value },
-          create: { key: item.key, value: item.value },
-        })
-      )
-    );
-    return { success: true, count: dto.settings.length };
+    const { banners, testimonials, ...settingsData } = dto;
+
+    return this.prisma.$transaction(async (tx) => {
+      // Upsert global settings
+      const updatedSettings = await tx.systemSetting.upsert({
+        where: { id: 'global' },
+        update: settingsData,
+        create: {
+          id: 'global',
+          ...settingsData
+        },
+      });
+
+      // Handle Banners if provided
+      if (banners) {
+        // Delete all old banners for this setting
+        await tx.siteBanner.deleteMany({
+          where: { systemSettingId: 'global' }
+        });
+
+        // Insert new ones
+        if (banners.length > 0) {
+          await tx.siteBanner.createMany({
+            data: banners.map((b) => ({
+              imageUrl: b.imageUrl,
+              targetUrl: b.targetUrl,
+              isActive: b.isActive !== undefined ? b.isActive : true,
+              sortOrder: b.sortOrder || 0,
+              systemSettingId: 'global',
+            }))
+          });
+        }
+      }
+
+      // Handle Testimonials if provided
+      if (testimonials) {
+        await tx.testimonial.deleteMany({
+          where: { systemSettingId: 'global' }
+        });
+
+        if (testimonials.length > 0) {
+          await tx.testimonial.createMany({
+            data: testimonials.map((t) => ({
+              authorName: t.authorName,
+              authorRole: t.authorRole,
+              content: t.content,
+              avatarUrl: t.avatarUrl,
+              isActive: t.isActive !== undefined ? t.isActive : true,
+              sortOrder: t.sortOrder || 0,
+              systemSettingId: 'global',
+            }))
+          });
+        }
+      }
+
+      return { success: true };
+    });
   }
 }

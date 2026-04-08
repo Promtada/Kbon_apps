@@ -3,21 +3,39 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, UploadCloud, User, MonitorPlay, Loader2, Image as ImageIcon, 
-  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag 
+  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag, Plus 
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:4000/api';
 
-const SETTING_KEYS = {
-  ADMIN_NAME: 'admin_name',
-  ADMIN_AVATAR: 'admin_avatar_url',
-  HERO_TITLE: 'home_hero_title',
-  HERO_SUBTITLE: 'home_hero_subtitle',
-  HERO_MEDIA: 'home_hero_video_url',
-  BANNER_ENABLED: 'site_banner_enabled',
-  BANNER_IMAGE: 'site_banner_image_url',
-  BANNER_LINK: 'site_banner_link',
-};
+export interface SiteBanner {
+  id?: string;
+  imageUrl: string;
+  targetUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface Testimonial {
+  id?: string;
+  authorName: string;
+  authorRole?: string;
+  content: string;
+  avatarUrl?: string;
+  isActive: boolean;
+  sortOrder: number;
+}
+
+export interface SystemSetting {
+  adminName?: string;
+  adminAvatarUrl?: string;
+  mainHeadline?: string;
+  subHeadline?: string;
+  heroMediaUrl?: string;
+  bannerEnabled?: boolean;
+  banners: SiteBanner[];
+  testimonials: Testimonial[];
+}
 
 export default function AdminSettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
@@ -27,20 +45,19 @@ export default function AdminSettingsPage() {
   // Navigation State
   const [activeTab, setActiveTab] = useState('general');
 
-  const [settings, setSettings] = useState<Record<string, string>>({
-    [SETTING_KEYS.ADMIN_NAME]: '',
-    [SETTING_KEYS.ADMIN_AVATAR]: '',
-    [SETTING_KEYS.HERO_TITLE]: '',
-    [SETTING_KEYS.HERO_SUBTITLE]: '',
-    [SETTING_KEYS.HERO_MEDIA]: '',
-    [SETTING_KEYS.BANNER_ENABLED]: 'false',
-    [SETTING_KEYS.BANNER_IMAGE]: '',
-    [SETTING_KEYS.BANNER_LINK]: '',
+  const [settings, setSettings] = useState<SystemSetting>({
+    adminName: '',
+    adminAvatarUrl: '',
+    mainHeadline: '',
+    subHeadline: '',
+    heroMediaUrl: '',
+    bannerEnabled: false,
+    banners: [],
+    testimonials: [],
   });
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const heroInputRef = useRef<HTMLInputElement>(null);
-  const bannerInputRef = useRef<HTMLInputElement>(null);
 
   // ---------- Fetch Settings ----------
   useEffect(() => {
@@ -49,7 +66,17 @@ export default function AdminSettingsPage() {
         const res = await fetch(`${API_BASE}/settings`);
         if (res.ok) {
           const data = await res.json();
-          setSettings((prev) => ({ ...prev, ...data }));
+          // Merge with defaults
+          setSettings({
+            adminName: data.adminName || '',
+            adminAvatarUrl: data.adminAvatarUrl || '',
+            mainHeadline: data.mainHeadline || '',
+            subHeadline: data.subHeadline || '',
+            heroMediaUrl: data.heroMediaUrl || '',
+            bannerEnabled: data.bannerEnabled || false,
+            banners: data.banners || [],
+            testimonials: data.testimonials || [],
+          });
         }
       } catch (error) {
         console.warn('Failed to fetch settings:', error);
@@ -61,11 +88,61 @@ export default function AdminSettingsPage() {
   }, []);
 
   // ---------- Handlers ----------
-  const handleChange = (key: string, value: string) => {
+  const handleChange = (key: keyof SystemSetting, value: any) => {
     setSettings((prev) => ({ ...prev, [key]: value }));
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, settingKey: string) => {
+  const handleBannerChange = (index: number, key: keyof SiteBanner, value: any) => {
+    setSettings((prev) => {
+      const newBanners = [...prev.banners];
+      newBanners[index] = { ...newBanners[index], [key]: value };
+      return { ...prev, banners: newBanners };
+    });
+  };
+
+  const addBanner = () => {
+    setSettings((prev) => ({
+      ...prev,
+      banners: [
+        ...prev.banners,
+        { imageUrl: '', targetUrl: '', isActive: true, sortOrder: prev.banners.length }
+      ]
+    }));
+  };
+
+  const removeBanner = (index: number) => {
+    setSettings((prev) => {
+      const newBanners = prev.banners.filter((_, i) => i !== index);
+      return { ...prev, banners: newBanners };
+    });
+  };
+
+  const handleTestimonialChange = (index: number, key: keyof Testimonial, value: any) => {
+    setSettings((prev) => {
+      const newTs = [...prev.testimonials];
+      newTs[index] = { ...newTs[index], [key]: value };
+      return { ...prev, testimonials: newTs };
+    });
+  };
+
+  const addTestimonial = () => {
+    setSettings((prev) => ({
+      ...prev,
+      testimonials: [
+        ...prev.testimonials,
+        { authorName: '', authorRole: '', content: '', avatarUrl: '', isActive: true, sortOrder: prev.testimonials.length }
+      ]
+    }));
+  };
+
+  const removeTestimonial = (index: number) => {
+    setSettings((prev) => {
+      const newTs = prev.testimonials.filter((_, i) => i !== index);
+      return { ...prev, testimonials: newTs };
+    });
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, fieldName: string, bannerIndex?: number) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -74,7 +151,11 @@ export default function AdminSettingsPage() {
       return;
     }
 
-    setIsUploading(settingKey);
+    let uploadKey = fieldName;
+    if (fieldName === 'banner' && bannerIndex !== undefined) uploadKey = `banner_${bannerIndex}`;
+    else if (fieldName === 'testimonial' && bannerIndex !== undefined) uploadKey = `testimonial_${bannerIndex}`;
+
+    setIsUploading(uploadKey);
 
     const formData = new FormData();
     formData.append('file', file);
@@ -88,7 +169,13 @@ export default function AdminSettingsPage() {
       if (!res.ok) throw new Error('อัปโหลดไม่สำเร็จ');
 
       const data = await res.json();
-      handleChange(settingKey, data.url);
+      if (fieldName === 'banner' && bannerIndex !== undefined) {
+        handleBannerChange(bannerIndex, 'imageUrl', data.url);
+      } else if (fieldName === 'testimonial' && bannerIndex !== undefined) {
+        handleTestimonialChange(bannerIndex, 'avatarUrl', data.url);
+      } else {
+        handleChange(fieldName as keyof SystemSetting, data.url);
+      }
     } catch (error) {
       alert('เกิดข้อผิดพลาดในการอัปโหลดไฟล์');
       console.error(error);
@@ -98,7 +185,7 @@ export default function AdminSettingsPage() {
     }
   };
 
-  const clearMedia = (key: string) => {
+  const clearMedia = (key: keyof SystemSetting) => {
     handleChange(key, '');
   };
 
@@ -106,22 +193,15 @@ export default function AdminSettingsPage() {
   const handleSubmit = async () => {
     setIsSubmitting(true);
     try {
-      const payload = Object.entries(settings).map(([key, value]) => ({
-        key,
-        value,
-      }));
-
       const res = await fetch(`${API_BASE}/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ settings: payload }),
+        body: JSON.stringify(settings),
       });
 
       if (!res.ok) throw new Error('บันทึกการตั้งค่าไม่สำเร็จ');
       
       alert('บันทึกการตั้งค่าระบบเรียบร้อยแล้ว! ✅');
-      
-      // Reload the page so the Navbar updates its avatar
       window.location.reload();
     } catch (error) {
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -168,7 +248,6 @@ export default function AdminSettingsPage() {
         
         {/* --- Sidebar Tabs (Left) --- */}
         <div className="lg:w-64 w-full shrink-0 flex flex-col gap-2 sticky top-52">
-          
           <button 
             onClick={() => setActiveTab('general')}
             className={`flex items-center gap-3 px-5 py-4 rounded-3xl font-bold text-sm transition-all duration-300 ${
@@ -179,7 +258,6 @@ export default function AdminSettingsPage() {
           >
             <User size={18} /> ข้อมูลทั่วไป (Profile)
           </button>
-
           <button 
             onClick={() => setActiveTab('home')}
             className={`flex items-center gap-3 px-5 py-4 rounded-3xl font-bold text-sm transition-all duration-300 ${
@@ -190,7 +268,6 @@ export default function AdminSettingsPage() {
           >
             <MonitorPlay size={18} /> หน้าแรก (Home Page)
           </button>
-
           <button 
             onClick={() => setActiveTab('product')}
             className={`flex items-center gap-3 px-5 py-4 rounded-3xl font-bold text-sm transition-all duration-300 ${
@@ -201,13 +278,12 @@ export default function AdminSettingsPage() {
           >
             <ShoppingBag size={18} /> หน้าสินค้า (Product Page)
           </button>
-
         </div>
 
         {/* --- Main View Container (Right) --- */}
         <div className="flex-1 w-full min-w-0 space-y-8 pb-10">
 
-          {/* ================= TAB 1: GENERAL & PROFILE ================= */}
+          {/* ================= TAB 1: GENERAL ================= */}
           <div className={`space-y-8 transition-all duration-500 ${activeTab === 'general' ? 'opacity-100 block' : 'hidden opacity-0'}`}>
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-8">
@@ -224,11 +300,11 @@ export default function AdminSettingsPage() {
                 {/* Avatar Column */}
                 <div className="flex-shrink-0 w-full md:w-56 space-y-4">
                   <div className="relative w-full aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] overflow-hidden group">
-                    {settings[SETTING_KEYS.ADMIN_AVATAR] ? (
+                    {settings.adminAvatarUrl ? (
                       <>
-                        <img src={settings[SETTING_KEYS.ADMIN_AVATAR]} alt="Admin Avatar" className="w-full h-full object-cover" />
+                        <img src={settings.adminAvatarUrl} alt="Admin Avatar" className="w-full h-full object-cover" />
                         <button 
-                          onClick={() => clearMedia(SETTING_KEYS.ADMIN_AVATAR)}
+                          onClick={() => clearMedia('adminAvatarUrl')}
                           className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors shadow-sm opacity-0 group-hover:opacity-100"
                         >
                           <Trash2 size={16} />
@@ -236,7 +312,7 @@ export default function AdminSettingsPage() {
                       </>
                     ) : (
                       <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
-                        {isUploading === SETTING_KEYS.ADMIN_AVATAR ? (
+                        {isUploading === 'adminAvatarUrl' ? (
                           <Loader2 size={32} className="animate-spin text-blue-500 mb-2" />
                         ) : (
                           <>
@@ -251,11 +327,11 @@ export default function AdminSettingsPage() {
                   
                   <input 
                     type="file" accept="image/*" className="hidden" ref={avatarInputRef}
-                    onChange={(e) => handleFileUpload(e, SETTING_KEYS.ADMIN_AVATAR)} 
+                    onChange={(e) => handleFileUpload(e, 'adminAvatarUrl')} 
                   />
                   <button 
                     onClick={() => avatarInputRef.current?.click()}
-                    disabled={isUploading === SETTING_KEYS.ADMIN_AVATAR}
+                    disabled={isUploading === 'adminAvatarUrl'}
                     className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
                   >
                     <UploadCloud size={16} />อัปโหลดภาพโปรไฟล์
@@ -269,17 +345,16 @@ export default function AdminSettingsPage() {
                   </label>
                   <input 
                     type="text" 
-                    value={settings[SETTING_KEYS.ADMIN_NAME]}
-                    onChange={(e) => handleChange(SETTING_KEYS.ADMIN_NAME, e.target.value)}
+                    value={settings.adminName || ''}
+                    onChange={(e) => handleChange('adminName', e.target.value)}
                     placeholder="เช่น Administrator / สมชาย"
                     className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none placeholder:font-normal"
                   />
-                  <p className="text-[11px] text-slate-400 mt-3 ml-2 font-medium">ชื่อนี้จะถูกแสดงที่มุมขวาบนของ Admin Dashboard แทนชื่อเริ่มต้น</p>
+                  <p className="text-[11px] text-slate-400 mt-3 ml-2 font-medium">ชื่อนี้จะถูกแสดงที่มุมขวาบนของ Admin Dashboard</p>
                 </div>
               </div>
             </div>
           </div>
-
 
           {/* ================= TAB 2: HOME PAGE ================= */}
           <div className={`space-y-8 transition-all duration-500 ${activeTab === 'home' ? 'opacity-100 block' : 'hidden opacity-0'}`}>
@@ -291,8 +366,8 @@ export default function AdminSettingsPage() {
                   <MonitorPlay size={22} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-800">ส่วนหัวหน้าแรก (Homepage Hero)</h2>
-                  <p className="text-xs font-bold text-slate-400 mt-1">ตั้งค่าข้อความและวิดีโอพื้นหลังที่ดึงดูดใจ</p>
+                  <h2 className="text-xl font-black text-slate-800">ส่วนหัวหน้าแรก (Homepage Hero Text)</h2>
+                  <p className="text-xs font-bold text-slate-400 mt-1">ตั้งค่าข้อความต้อนรับที่จะวางซ้อนทับภาพแบนเนอร์</p>
                 </div>
               </div>
 
@@ -303,8 +378,8 @@ export default function AdminSettingsPage() {
                   </label>
                   <input 
                     type="text" 
-                    value={settings[SETTING_KEYS.HERO_TITLE]}
-                    onChange={(e) => handleChange(SETTING_KEYS.HERO_TITLE, e.target.value)}
+                    value={settings.mainHeadline || ''}
+                    onChange={(e) => handleChange('mainHeadline', e.target.value)}
                     placeholder="เช่น Smart Hydroponics สำหรับทุกคน"
                     className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
                   />
@@ -314,73 +389,18 @@ export default function AdminSettingsPage() {
                   <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2">
                     คำโปรยรอง (Sub Headline)
                   </label>
-                  <input 
-                    type="text" 
-                    value={settings[SETTING_KEYS.HERO_SUBTITLE]}
-                    onChange={(e) => handleChange(SETTING_KEYS.HERO_SUBTITLE, e.target.value)}
+                  <textarea 
+                    value={settings.subHeadline || ''}
+                    onChange={(e) => handleChange('subHeadline', e.target.value)}
                     placeholder="อธิบายสั้นๆ ดึงดูดลูกค้า..."
-                    className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                    rows={3}
+                    className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none resize-none"
                   />
-                </div>
-
-                <div className="pt-6 border-t border-slate-50">
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-4 flex justify-between items-center">
-                    <span>วิดีโอ/รูปภาพ พิเศษหลังข้อความ (Background Media)</span>
-                  </label>
-                  
-                  <div className="relative w-full aspect-[21/9] bg-slate-900 rounded-[2rem] overflow-hidden group shadow-inner">
-                    {settings[SETTING_KEYS.HERO_MEDIA] ? (
-                      <>
-                        {settings[SETTING_KEYS.HERO_MEDIA].match(/\.(mp4|webm|mov)$/i) ? (
-                          <video 
-                            src={settings[SETTING_KEYS.HERO_MEDIA]} 
-                            autoPlay loop muted playsInline
-                            className="w-full h-full object-cover opacity-80"
-                          />
-                        ) : (
-                          <img src={settings[SETTING_KEYS.HERO_MEDIA]} alt="Hero BGG" className="w-full h-full object-cover opacity-80" />
-                        )}
-                        
-                        <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => clearMedia(SETTING_KEYS.HERO_MEDIA)}
-                            className="bg-red-500 text-white px-6 py-3 rounded-2xl font-bold text-sm shadow-xl hover:bg-red-600 transition-colors flex items-center gap-2"
-                          >
-                            <Trash2 size={16} /> ลบวิดีโอ/รูปภาพนี้
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-500">
-                        {isUploading === SETTING_KEYS.HERO_MEDIA ? (
-                          <Loader2 size={40} className="animate-spin text-[#22C55E]" />
-                        ) : (
-                          <>
-                            <UploadCloud size={48} className="text-slate-600 mb-4 opacity-50" />
-                            <p className="font-bold text-sm mb-1">ยังไม่มีสื่อพื้นหลัง</p>
-                            <p className="text-xs opacity-70">รองรับ MP4, WEBM หรือรูปภาพ JPG, PNG (Max 50MB)</p>
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  <input 
-                    type="file" accept="video/*,image/*" className="hidden" ref={heroInputRef}
-                    onChange={(e) => handleFileUpload(e, SETTING_KEYS.HERO_MEDIA)} 
-                  />
-                  <button 
-                    onClick={() => heroInputRef.current?.click()}
-                    disabled={isUploading === SETTING_KEYS.HERO_MEDIA}
-                    className="w-full mt-4 py-4 bg-purple-50 text-purple-600 hover:bg-purple-100 rounded-[1.5rem] font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50 border border-purple-100"
-                  >
-                    <UploadCloud size={18} /> อัปโหลดไฟล์สื่อใหม่
-                  </button>
                 </div>
               </div>
             </div>
 
-            {/* 2.2 Banner Config */}
+            {/* 2.2 Banners Config */}
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
               <div className="flex items-center justify-between mb-8">
                 <div className="flex items-center gap-3">
@@ -388,84 +408,217 @@ export default function AdminSettingsPage() {
                     <ImageIcon size={22} />
                   </div>
                   <div>
-                    <h2 className="text-xl font-black text-slate-800">แบนเนอร์ประชาสัมพันธ์ (Site Banner)</h2>
-                    <p className="text-xs font-bold text-slate-400 mt-1">พื้นที่ประกาศส่วนลดหรือแคมเปญต่างๆ</p>
+                    <h2 className="text-xl font-black text-slate-800">แบนเนอร์สไลด์ (Hero Carousel)</h2>
+                    <p className="text-xs font-bold text-slate-400 mt-1">ภาพพื้นหลังที่จะสไลด์หมุนวนในหน้าแรก</p>
                   </div>
                 </div>
-                
-                {/* Toggle State */}
+              </div>
+
+              <div className="space-y-8">
+                {settings.banners.map((banner, index) => (
+                  <div key={index} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-200 relative group">
+                    <button 
+                      onClick={() => removeBanner(index)}
+                      className="absolute -top-3 -right-3 bg-red-100 text-red-500 hover:bg-red-500 hover:text-white p-2 rounded-full shadow-sm transition-colors z-10"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    
+                    <div className="flex flex-col md:flex-row gap-6">
+                      {/* Banner Image */}
+                      <div className="w-full md:w-64 space-y-3">
+                        <div className="relative w-full aspect-[21/9] bg-slate-200 rounded-2xl overflow-hidden shadow-inner">
+                          {banner.imageUrl ? (
+                            <img src={banner.imageUrl} alt="Banner" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex items-center justify-center h-full text-slate-400">
+                              {isUploading === `banner_${index}` ? <Loader2 className="animate-spin" /> : <ImageIcon size={24} />}
+                            </div>
+                          )}
+                        </div>
+                        
+                        <input 
+                          type="file" accept="image/*" className="hidden"
+                          id={`banner-upload-${index}`}
+                          onChange={(e) => handleFileUpload(e, 'banner', index)} 
+                        />
+                        <button 
+                          onClick={() => document.getElementById(`banner-upload-${index}`)?.click()}
+                          disabled={isUploading === `banner_${index}`}
+                          className="w-full py-2 bg-white border border-slate-200 hover:bg-slate-100 rounded-xl font-bold text-xs text-slate-600 flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                        >
+                          <UploadCloud size={14} /> อัปโหลดภาพ
+                        </button>
+                      </div>
+
+                      {/* Banner Info */}
+                      <div className="flex-1 space-y-4">
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">ลิงก์เมื่อคลิก (Target URL)</label>
+                          <input 
+                            type="url" 
+                            value={banner.targetUrl || ''}
+                            onChange={(e) => handleBannerChange(index, 'targetUrl', e.target.value)}
+                            placeholder="เช่น /products/123"
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-600">
+                            <input 
+                              type="checkbox" 
+                              checked={banner.isActive}
+                              onChange={(e) => handleBannerChange(index, 'isActive', e.target.checked)}
+                              className="w-4 h-4 text-[#22C55E] focus:ring-[#22C55E] rounded block" 
+                            />
+                            แสดงผลอยู่ (Active)
+                          </label>
+                          
+                          <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                            <span>ลำดับ:</span>
+                            <input 
+                              type="number" 
+                              value={banner.sortOrder}
+                              onChange={(e) => handleBannerChange(index, 'sortOrder', parseInt(e.target.value) || 0)}
+                              className="w-16 bg-white border border-slate-200 rounded-lg py-1 px-2 text-center text-slate-900 font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
                 <button 
-                  onClick={() => handleChange(SETTING_KEYS.BANNER_ENABLED, settings[SETTING_KEYS.BANNER_ENABLED] === 'true' ? 'false' : 'true')}
-                  className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold text-sm shadow-sm transition-colors ${
-                    settings[SETTING_KEYS.BANNER_ENABLED] === 'true' 
-                      ? 'bg-emerald-50 text-[#22C55E] border border-emerald-100' 
-                      : 'bg-slate-100 text-slate-400 border border-slate-200'
-                  }`}
+                  onClick={addBanner}
+                  className="w-full py-6 bg-emerald-50/50 hover:bg-emerald-50 text-[#22C55E] font-black tracking-widest text-xs uppercase border-2 border-dashed border-emerald-200 hover:border-emerald-400 rounded-[2rem] flex items-center justify-center gap-2 transition-all"
                 >
-                  {settings[SETTING_KEYS.BANNER_ENABLED] === 'true' ? <Eye size={18} /> : <EyeOff size={18} />}
-                  {settings[SETTING_KEYS.BANNER_ENABLED] === 'true' ? 'ระบบเปิดใช้งานแบนเนอร์' : 'ซ่อนแบนเนอร์ไว้'}
+                  <Plus size={18} /> เพิ่มแบนเนอร์ใหม่
                 </button>
               </div>
 
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-4">
-                    รูปภาพแบนเนอร์ (Banner Asset)
-                  </label>
-                  
-                  <div className="relative w-full aspect-[4/1] bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] overflow-hidden group">
-                    {settings[SETTING_KEYS.BANNER_IMAGE] ? (
-                      <>
-                        <img src={settings[SETTING_KEYS.BANNER_IMAGE]} alt="Banner Preview" className="w-full h-full object-cover" />
-                        <div className="absolute inset-0 bg-white/40 backdrop-blur-sm flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => clearMedia(SETTING_KEYS.BANNER_IMAGE)}
-                            className="bg-white text-red-500 px-6 py-3 rounded-2xl font-bold text-sm shadow-xl hover:bg-red-50 transition-colors flex items-center gap-2"
-                          >
-                            <Trash2 size={16} /> ลบรูปภาพแบนเนอร์นี้
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400">
-                        {isUploading === SETTING_KEYS.BANNER_IMAGE ? (
-                          <Loader2 size={32} className="animate-spin text-[#22C55E]" />
-                        ) : (
-                          <>
-                            <ImageIcon size={32} className="text-slate-300 mb-2" />
-                            <p className="text-xs font-bold">แบนเนอร์ยังวางอยู่</p>
-                          </>
-                        )}
-                      </div>
-                    )}
+            </div>
+
+            {/* 2.3 Testimonials Config (New) */}
+            <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+              <div className="flex items-center justify-between mb-8">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-[1.2rem] bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
+                    <User size={22} />
                   </div>
-
-                  <input 
-                    type="file" accept="image/*" className="hidden" ref={bannerInputRef}
-                    onChange={(e) => handleFileUpload(e, SETTING_KEYS.BANNER_IMAGE)} 
-                  />
-                  <button 
-                    onClick={() => bannerInputRef.current?.click()}
-                    disabled={isUploading === SETTING_KEYS.BANNER_IMAGE}
-                    className="w-full mt-4 py-4 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-[1.5rem] font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
-                  >
-                    <UploadCloud size={16} /> อัปโหลดไฟล์ (เฉพาะรูปภาพแนวนอน)
-                  </button>
-                </div>
-
-                <div className="pt-4">
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
-                    <LinkIcon size={14} /> ลิงก์เมื่อผู้ใช้คลิกแบนเนอร์ (Target URL)
-                  </label>
-                  <input 
-                    type="url" 
-                    value={settings[SETTING_KEYS.BANNER_LINK]}
-                    onChange={(e) => handleChange(SETTING_KEYS.BANNER_LINK, e.target.value)}
-                    placeholder="เช่น https://shop.kbon.com/promo หรือ /products/123"
-                    className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
-                  />
+                  <div>
+                    <h2 className="text-xl font-black text-slate-800">เสียงจากผู้ใช้งานจริง (Testimonials)</h2>
+                    <p className="text-xs font-bold text-slate-400 mt-1">รีวิวความประทับใจจากลูกค้า (ส่วนล่างของหน้าแรก)</p>
+                  </div>
                 </div>
               </div>
+
+              <div className="space-y-8">
+                {settings.testimonials.map((testimonial, index) => (
+                  <div key={index} className="p-6 bg-slate-50 rounded-[2rem] border border-slate-200 relative group">
+                    <button 
+                      onClick={() => removeTestimonial(index)}
+                      className="absolute -top-3 -right-3 bg-red-100 text-red-500 hover:bg-red-500 hover:text-white p-2 rounded-full shadow-sm transition-colors z-10"
+                    >
+                      <Trash2 size={16} />
+                    </button>
+                    
+                    <div className="flex flex-col xl:flex-row gap-6">
+                      {/* Avatar Image */}
+                      <div className="w-24 shrink-0 flex flex-col items-center gap-2">
+                        <div className="relative w-20 h-20 bg-slate-100 rounded-full border border-slate-200 overflow-hidden shadow-inner flex shrink-0">
+                          {testimonial.avatarUrl ? (
+                            <img src={testimonial.avatarUrl} alt="Avatar" className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="flex items-center justify-center w-full h-full text-slate-300">
+                              {isUploading === `testimonial_${index}` ? <Loader2 className="animate-spin" /> : <User size={24} />}
+                            </div>
+                          )}
+                        </div>
+                        <input 
+                          type="file" accept="image/*" className="hidden"
+                          id={`testimonial-upload-${index}`}
+                          onChange={(e) => handleFileUpload(e, 'testimonial', index)} 
+                        />
+                        <button 
+                          onClick={() => document.getElementById(`testimonial-upload-${index}`)?.click()}
+                          disabled={isUploading === `testimonial_${index}`}
+                          className="w-full py-1.5 bg-white border border-slate-200 hover:bg-slate-100 rounded-lg font-bold text-[10px] text-slate-500 transition-colors"
+                        >
+                          เปลี่ยนรูป
+                        </button>
+                      </div>
+
+                      {/* Content Fields */}
+                      <div className="flex-1 space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">ชื่อผู้ใช้งาน</label>
+                            <input 
+                              type="text" 
+                              value={testimonial.authorName}
+                              onChange={(e) => handleTestimonialChange(index, 'authorName', e.target.value)}
+                              placeholder="เช่น คุณสมชาย"
+                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">ตำแหน่ง / อาชีพ</label>
+                            <input 
+                              type="text" 
+                              value={testimonial.authorRole || ''}
+                              onChange={(e) => handleTestimonialChange(index, 'authorRole', e.target.value)}
+                              placeholder="เช่น เจ้าของฟาร์ม Organic"
+                              className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1">ข้อความรีวิว</label>
+                          <textarea 
+                            value={testimonial.content}
+                            onChange={(e) => handleTestimonialChange(index, 'content', e.target.value)}
+                            placeholder="ระบบรดน้ำอัตโนมัติช่วยประหยัดเวลาได้เยอะมาก..."
+                            rows={2}
+                            className="w-full bg-white border border-slate-200 rounded-xl py-3 px-4 text-sm font-bold text-slate-900 placeholder-slate-400 focus:ring-2 focus:ring-[#22C55E]/20 outline-none resize-none"
+                          />
+                        </div>
+                        
+                        <div className="flex items-center gap-6">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-bold text-slate-600">
+                            <input 
+                              type="checkbox" 
+                              checked={testimonial.isActive}
+                              onChange={(e) => handleTestimonialChange(index, 'isActive', e.target.checked)}
+                              className="w-4 h-4 text-[#22C55E] focus:ring-[#22C55E] rounded block" 
+                            />
+                            แสดลผล (Active)
+                          </label>
+                          <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                            <span>ลำดับ:</span>
+                            <input 
+                              type="number" 
+                              value={testimonial.sortOrder}
+                              onChange={(e) => handleTestimonialChange(index, 'sortOrder', parseInt(e.target.value) || 0)}
+                              className="w-16 bg-white border border-slate-200 rounded-lg py-1 px-2 text-center text-slate-900 font-bold"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <button 
+                  onClick={addTestimonial}
+                  className="w-full py-6 bg-indigo-50/50 hover:bg-indigo-50 text-indigo-500 font-black tracking-widest text-xs uppercase border-2 border-dashed border-indigo-200 hover:border-indigo-400 rounded-[2rem] flex items-center justify-center gap-2 transition-all"
+                >
+                  <Plus size={18} /> เพิ่มรีวิวจากลูกค้า
+                </button>
+              </div>
+
             </div>
           </div>
 

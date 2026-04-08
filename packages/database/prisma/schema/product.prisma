@@ -76,10 +76,3 @@ model Review {
   @@index([status])
 }
 
-// ระบบตั้งค่าเว็บไซต์
-model SystemSetting {
-  id        String   @id @default(cuid())
-  key       String   @unique
-  value     String   @db.Text
-  updatedAt DateTime @updatedAt
-}
