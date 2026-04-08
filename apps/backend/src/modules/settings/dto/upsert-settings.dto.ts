@@ -76,6 +76,18 @@ export class UpsertSettingsDto {
   bannerEnabled?: boolean;
 
   @IsOptional()
+  @IsString()
+  productPageHeadline?: string;
+
+  @IsOptional()
+  @IsString()
+  productPageSubHeadline?: string;
+
+  @IsOptional()
+  @IsString()
+  productPageBannerUrl?: string;
+
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => UpsertSiteBannerDto)

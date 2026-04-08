@@ -196,6 +196,7 @@ export default function ProductsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [settings, setSettings] = useState<any>(null);
   const debouncedSearchTerm = useDebounce(searchTerm, 500);
 
   const [activeCategory, setActiveCategory] = useState('ทั้งหมด');
@@ -208,10 +209,23 @@ export default function ProductsPage() {
   const [sortBy, setSortBy] = useState<string>('createdAt');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
-  // Restore user session
+  // Restore user session & global settings
   useEffect(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.USER);
     if (saved) setUser(JSON.parse(saved));
+
+    const fetchSettings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/settings`);
+        if (res.ok) {
+          const data = await res.json();
+          setSettings(data);
+        }
+      } catch (err) {
+        console.warn('Failed to fetch settings:', err);
+      }
+    };
+    fetchSettings();
   }, []);
 
   // Fetch published products
@@ -277,16 +291,36 @@ export default function ProductsPage() {
       <main className="flex-grow">
 
         {/* ---- Hero Banner ---- */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 pt-20 pb-16 px-6">
-          {/* Decorative blobs */}
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#22C55E]/20 rounded-full blur-[120px]" />
-            <div className="absolute -bottom-16 right-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-[100px]" />
+        <section className="relative overflow-hidden pt-20 pb-16 px-6">
+          {/* Background Layer */}
+          <div className="absolute inset-0 w-full h-full bg-slate-900 overflow-hidden">
+            {settings?.productPageBannerUrl ? (
+              <img 
+                src={settings.productPageBannerUrl} 
+                alt="Product Store Background"
+                className="w-full h-full object-cover object-center"
+              />
+            ) : (
+               <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+            )}
           </div>
+          
+          {/* Dark overlay to ensure text is readable if a bright image is used */}
+          {settings?.productPageBannerUrl && (
+            <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-[2px]" />
+          )}
 
-          <div className="max-w-7xl mx-auto relative z-10">
+          {/* Decorative blobs (hide if custom banner is present) */}
+          {!settings?.productPageBannerUrl && (
+            <div className="absolute inset-0 overflow-hidden pointer-events-none">
+              <div className="absolute -top-24 -left-24 w-96 h-96 bg-[#22C55E]/20 rounded-full blur-[120px]" />
+              <div className="absolute -bottom-16 right-0 w-80 h-80 bg-emerald-400/10 rounded-full blur-[100px]" />
+            </div>
+          )}
+
+          <div className="max-w-7xl mx-auto relative z-10 transition-all duration-700">
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-10">
+            <div className="flex items-center gap-2 text-slate-300 text-xs font-bold uppercase tracking-widest mb-10 drop-shadow-sm">
               <Link href="/" className="hover:text-[#22C55E] transition-colors">หน้าแรก</Link>
               <ChevronRight size={14} />
               <span className="text-[#22C55E]">สินค้าทั้งหมด</span>
@@ -294,26 +328,28 @@ export default function ProductsPage() {
 
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-8 mb-12">
               <div>
-                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1]">
-                  Kbon Store
-                  <span className="block text-[#22C55E] mt-2">Smart Farming Gear</span>
+                <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-white tracking-tight leading-[1.1] drop-shadow-md">
+                  {settings?.productPageHeadline || 'Kbon Store'}
+                  {!settings?.productPageHeadline && (
+                    <span className="block text-[#22C55E] mt-2">Smart Farming Gear</span>
+                  )}
                 </h1>
-                <p className="text-slate-400 mt-5 text-lg font-medium max-w-lg leading-relaxed">
-                  Discover high-end hydroponic automation, absolute precision nutrients, and professional tier hardware for modern growers.
+                <p className="text-slate-200 mt-5 text-lg font-medium max-w-lg leading-relaxed drop-shadow-sm">
+                  {settings?.productPageSubHeadline || 'Discover high-end hydroponic automation, absolute precision nutrients, and professional tier hardware for modern growers.'}
                 </p>
               </div>
 
               {/* Stats */}
               {!isLoading && (
-                <div className="flex gap-6">
+                <div className="flex gap-6 drop-shadow-md">
                   <div className="text-center">
                     <p className="text-3xl font-black text-white">{allProducts.length}</p>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">สินค้า</p>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 drop-shadow-none">สินค้า</p>
                   </div>
-                  <div className="w-px bg-slate-700" />
+                  <div className="w-px bg-slate-600/50" />
                   <div className="text-center">
                     <p className="text-3xl font-black text-white">{CATEGORIES.length - 1}</p>
-                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1">หมวดหมู่</p>
+                    <p className="text-slate-400 text-[10px] font-bold uppercase tracking-widest mt-1 drop-shadow-none">หมวดหมู่</p>
                   </div>
                 </div>
               )}

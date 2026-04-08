@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, UploadCloud, User, MonitorPlay, Loader2, Image as ImageIcon, 
-  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag, Plus 
+  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag, Plus, Info 
 } from 'lucide-react';
 
 const API_BASE = 'http://localhost:4000/api';
@@ -33,6 +33,9 @@ export interface SystemSetting {
   subHeadline?: string;
   heroMediaUrl?: string;
   bannerEnabled?: boolean;
+  productPageHeadline?: string;
+  productPageSubHeadline?: string;
+  productPageBannerUrl?: string;
   banners: SiteBanner[];
   testimonials: Testimonial[];
 }
@@ -52,6 +55,9 @@ export default function AdminSettingsPage() {
     subHeadline: '',
     heroMediaUrl: '',
     bannerEnabled: false,
+    productPageHeadline: '',
+    productPageSubHeadline: '',
+    productPageBannerUrl: '',
     banners: [],
     testimonials: [],
   });
@@ -74,6 +80,9 @@ export default function AdminSettingsPage() {
             subHeadline: data.subHeadline || '',
             heroMediaUrl: data.heroMediaUrl || '',
             bannerEnabled: data.bannerEnabled || false,
+            productPageHeadline: data.productPageHeadline || '',
+            productPageSubHeadline: data.productPageSubHeadline || '',
+            productPageBannerUrl: data.productPageBannerUrl || '',
             banners: data.banners || [],
             testimonials: data.testimonials || [],
           });
@@ -201,7 +210,7 @@ export default function AdminSettingsPage() {
 
       if (!res.ok) throw new Error('บันทึกการตั้งค่าไม่สำเร็จ');
       
-      alert('บันทึกการตั้งค่าระบบเรียบร้อยแล้ว! ✅');
+      alert('บันทึกการตั้งค่าระบบเรียบร้อยแล้ว');
       window.location.reload();
     } catch (error) {
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
@@ -292,7 +301,10 @@ export default function AdminSettingsPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-slate-800">ข้อมูลผู้ดูแลระบบ (Admin Profile)</h2>
-                  <p className="text-xs font-bold text-slate-400 mt-1">จัดการชื่อและรูปภาพที่จะแสดงใน Navigation Bar</p>
+                  <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
+                    <Info className="w-4 h-4 mr-2 text-blue-500 shrink-0" />
+                    จัดการชื่อและรูปภาพประจำตัวสำหรับแสดงผลในระบบ
+                  </p>
                 </div>
               </div>
 
@@ -350,7 +362,9 @@ export default function AdminSettingsPage() {
                     placeholder="เช่น Administrator / สมชาย"
                     className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none placeholder:font-normal"
                   />
-                  <p className="text-[11px] text-slate-400 mt-3 ml-2 font-medium">ชื่อนี้จะถูกแสดงที่มุมขวาบนของ Admin Dashboard</p>
+                  <p className="text-[11px] text-slate-500 mt-3 ml-2 font-medium flex items-center">
+                    <Info className="w-3 h-3 mr-1.5 text-slate-400" /> ชื่อนี้จะถูกนำไปแสดงในมุมขวาบนของ Admin Dashboard
+                  </p>
                 </div>
               </div>
             </div>
@@ -367,7 +381,10 @@ export default function AdminSettingsPage() {
                 </div>
                 <div>
                   <h2 className="text-xl font-black text-slate-800">ส่วนหัวหน้าแรก (Homepage Hero Text)</h2>
-                  <p className="text-xs font-bold text-slate-400 mt-1">ตั้งค่าข้อความต้อนรับที่จะวางซ้อนทับภาพแบนเนอร์</p>
+                  <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
+                    <Info className="w-4 h-4 mr-2 text-purple-500 shrink-0" />
+                    กำหนดข้อความต้อนรับที่จะวางซ้อนทับภาพแบนเนอร์ในส่วนหัวหน้าแรกของเว็บไซต์
+                  </p>
                 </div>
               </div>
 
@@ -409,7 +426,10 @@ export default function AdminSettingsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-800">แบนเนอร์สไลด์ (Hero Carousel)</h2>
-                    <p className="text-xs font-bold text-slate-400 mt-1">ภาพพื้นหลังที่จะสไลด์หมุนวนในหน้าแรก</p>
+                    <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
+                      <Info className="w-4 h-4 mr-2 text-orange-500 shrink-0" />
+                      จัดการภาพพื้นหลังที่จะหมุนเวียนแสดงแบบสไลด์ (Carousel) ในหน้าแรก
+                    </p>
                   </div>
                 </div>
               </div>
@@ -509,7 +529,10 @@ export default function AdminSettingsPage() {
                   </div>
                   <div>
                     <h2 className="text-xl font-black text-slate-800">เสียงจากผู้ใช้งานจริง (Testimonials)</h2>
-                    <p className="text-xs font-bold text-slate-400 mt-1">รีวิวความประทับใจจากลูกค้า (ส่วนล่างของหน้าแรก)</p>
+                    <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
+                      <Info className="w-4 h-4 mr-2 text-indigo-500 shrink-0" />
+                      ควบคุมความประทับใจของลูกค้าที่ร่วมแบ่งปันประสบการณ์ในการใช้งาน
+                    </p>
                   </div>
                 </div>
               </div>
@@ -625,14 +648,90 @@ export default function AdminSettingsPage() {
 
           {/* ================= TAB 3: PRODUCT PAGE ================= */}
           <div className={`space-y-8 transition-all duration-500 ${activeTab === 'product' ? 'opacity-100 block' : 'hidden opacity-0'}`}>
-            <div className="bg-white p-12 rounded-[3rem] shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center">
-              <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
-                <ShoppingBag size={32} className="text-slate-300" />
+            <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+              <div className="flex items-center gap-3 mb-8">
+                <div className="w-12 h-12 rounded-[1.2rem] bg-pink-50 text-pink-500 flex items-center justify-center shrink-0">
+                  <ShoppingBag size={22} />
+                </div>
+                <div>
+                  <h2 className="text-xl font-black text-slate-800">ส่วนหัวหน้าสินค้า (Product Page Banner)</h2>
+                  <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
+                    <Info className="w-4 h-4 mr-2 text-pink-500 shrink-0" />
+                    กำหนดเนื้อหาภาพรวมและเอกลักษณ์ที่แสดงผลบนหน้าต่างสินค้ารวม (/products)
+                  </p>
+                </div>
               </div>
-              <h2 className="text-xl font-black text-slate-800">การตั้งค่าหน้าสินค้า</h2>
-              <p className="text-sm font-bold text-slate-400 mt-2 max-w-sm">
-                โมดูลนี้รองรับการตั้งค่าแบนเนอร์หรือแจ้งเตือนแคมเปญเฉพาะหน้าสินค้าในอนาคต!
-              </p>
+
+              <div className="space-y-6">
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+                    <Type size={14} /> หัวข้อหลักหน้าสินค้า (Main Headline)
+                  </label>
+                  <input 
+                    type="text" 
+                    value={settings.productPageHeadline || ''}
+                    onChange={(e) => handleChange('productPageHeadline', e.target.value)}
+                    placeholder="เช่น Kbon Store"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+                    <Type size={14} /> คำโปรยรอง (Sub Headline)
+                  </label>
+                  <textarea 
+                    value={settings.productPageSubHeadline || ''}
+                    onChange={(e) => handleChange('productPageSubHeadline', e.target.value)}
+                    placeholder="เช่น Discover high-end hydroponic solutions..."
+                    rows={2}
+                    className="w-full bg-slate-50 border border-slate-100 rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-600 focus:ring-2 focus:ring-[#22C55E]/20 outline-none resize-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
+                    <ImageIcon size={14} /> ภาพพื้นหลังแบนเนอร์ (Background Banner)
+                  </label>
+                  <div className="relative w-full aspect-[21/9] md:aspect-[3/1] bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2rem] overflow-hidden group">
+                    {settings.productPageBannerUrl ? (
+                      <>
+                        <img src={settings.productPageBannerUrl} alt="Product Page Banner" className="w-full h-full object-cover" />
+                        <button 
+                          onClick={() => clearMedia('productPageBannerUrl')}
+                          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </>
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                        {isUploading === 'productPageBannerUrl' ? (
+                          <Loader2 size={32} className="animate-spin text-pink-500 mb-2" />
+                        ) : (
+                          <>
+                            <UploadCloud size={32} className="text-slate-300 mb-3" />
+                            <p className="text-xs font-bold">ว่างเปล่า</p>
+                            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">ลากวาง หรือคลิกปุ่มเพื่ออัปโหลด</p>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  
+                  <input 
+                    type="file" accept="image/*" className="hidden" id="product-banner-upload"
+                    onChange={(e) => handleFileUpload(e, 'productPageBannerUrl')} 
+                  />
+                  <button 
+                    onClick={() => document.getElementById('product-banner-upload')?.click()}
+                    disabled={isUploading === 'productPageBannerUrl'}
+                    className="w-full py-4 mt-3 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                  >
+                    <UploadCloud size={16} /> อัปโหลดภาพแบนเนอร์
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
 

@@ -5,10 +5,14 @@ model SystemSetting {
   mainHeadline   String?      @db.Text
   subHeadline    String?      @db.Text
   heroMediaUrl   String?
-  bannerEnabled  Boolean      @default(false)
+  bannerEnabled          Boolean      @default(false)
   
-  banners        SiteBanner[]
-  testimonials   Testimonial[]
+  productPageHeadline    String?      @db.Text
+  productPageSubHeadline String?      @db.Text
+  productPageBannerUrl   String?
+  
+  banners                SiteBanner[]
+  testimonials           Testimonial[]
   
   updatedAt      DateTime     @updatedAt
 }
