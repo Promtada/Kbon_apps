@@ -48,16 +48,24 @@ model ProductImage {
 }
 
 // ระบบรีวิวสินค้า
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
 model Review {
-  id      String  @id @default(cuid())
+  id      String @id @default(cuid())
   rating  Int // เก็บค่าดาว 1-5
   comment String? @db.Text
+
+  status ReviewStatus @default(PENDING) // สถานะการตรวจสอบ
 
   productId String
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
   userId       String?
-  user         User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user         User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
   reviewerName String? // สำหรับ guest review หรือชื่อที่บันทึกไว้
 
   createdAt DateTime @default(now())
@@ -65,6 +73,7 @@ model Review {
 
   @@index([productId])
   @@index([userId])
+  @@index([status])
 }
 
 // ระบบตั้งค่าเว็บไซต์

@@ -26,28 +26,50 @@ export default function LoginPage() {
     setIsMounted(true);
   }, []);
 
-  // Step 2: Only check auth + redirect AFTER the component has mounted on the client
+  // Step 2: Validate the token server-side BEFORE redirecting.
+  // Never trust the local Zustand state alone — it can be stale after a DB
+  // reset or token expiry, which causes the infinite "Checking access..." loop.
   useEffect(() => {
     if (!isMounted) return;
 
-    // Check with store first, ensuring the user object is valid and has a role (to avoid stale 'Sigma' data false-positives)
-    if (isAuthenticated && authUser && 'role' in authUser) {
-      const dest = authUser.role === 'ADMIN' ? '/admin/dashboard' : '/account';
-      window.location.href = dest;
+    const token = Cookies.get('access_token');
+
+    if (!token) {
+      // No token at all — definitely need to log in. Show the form.
+      const savedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL);
+      if (savedEmail) {
+        setEmail(savedEmail);
+        setRememberMe(true);
+      }
+      setIsLoading(false);
       return;
-    } else if (isAuthenticated && (!authUser || !('role' in authUser))) {
-      // Stale or malformed data detected, purge it to prevent redirect loops.
-      useAuthStore.getState().logout();
     }
 
-    const savedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL);
-    if (savedEmail) {
-      setEmail(savedEmail);
-      setRememberMe(true);
-    }
-    
-    setIsLoading(false);
-  }, [isMounted, isAuthenticated, authUser, router]);
+    // Token exists — verify it against the server before trusting Zustand state.
+    axios
+      .get('http://localhost:4000/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      .then((res) => {
+        // Token is valid — redirect to the correct destination.
+        const role = res.data?.role ?? authUser?.role;
+        const dest = role === 'ADMIN' ? '/admin/dashboard' : '/account';
+        window.location.replace(dest);
+      })
+      .catch(() => {
+        // Token is invalid/expired — purge everything so we never loop.
+        useAuthStore.getState().logout();
+        localStorage.removeItem(STORAGE_KEYS.AUTH_STORAGE);
+        localStorage.removeItem(STORAGE_KEYS.USER);
+
+        const savedEmail = localStorage.getItem(STORAGE_KEYS.REMEMBERED_EMAIL);
+        if (savedEmail) {
+          setEmail(savedEmail);
+          setRememberMe(true);
+        }
+        setIsLoading(false);
+      });
+  }, [isMounted]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

@@ -7,9 +7,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar'; 
 import { 
   LayoutDashboard, Box, Users, ShoppingCart, 
-  Tag, LogOut, Settings 
+  Tag, LogOut, Settings, MessageSquare 
 } from 'lucide-react';
-import Cookies from 'js-cookie';
 import { STORAGE_KEYS } from '../../lib/storageKeys';
 import { useAuthStore } from '../../store/useAuthStore';
 
@@ -32,6 +31,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: <Users size={20} />, label: 'จัดการลูกค้า', href: '/admin/customers' },
     { icon: <ShoppingCart size={20} />, label: 'คำสั่งซื้อ', href: '/admin/orders' },
     { icon: <Tag size={20} />, label: 'Coupons / Discounts', href: '/admin/coupons' },
+    { icon: <MessageSquare size={20} />, label: 'จัดการรีวิว', href: '/admin/reviews' },
     { icon: <Settings size={20} />, label: 'ตั้งค่าระบบ', href: '/admin/settings' },
   ];
 
@@ -74,17 +74,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="p-6 mt-auto border-t border-slate-50">
            <button 
              onClick={() => {
-               // 1. Clear Zustand Auth store
+               // 1. Reset Zustand store + cookies via centralized logout()
                useAuthStore.getState().logout();
 
-               // 2. Nuke auth cookies
-               Cookies.remove('access_token');
-               Cookies.remove('refresh_token');
+               // 2. Remove the persisted Zustand auth storage so it can't
+               //    re-hydrate a zombie session on the next page load.
+               localStorage.removeItem(STORAGE_KEYS.AUTH_STORAGE);
+               localStorage.removeItem(STORAGE_KEYS.USER);
 
-               // 3. FORCE CLEAR: Nuke ALL localStorage to catch rogue sigma_ keys
-               localStorage.clear();
-
-               alert('ออกจากระบบสำเร็จ');
                router.replace('/login');
              }}
              className="w-full flex items-center gap-4 px-5 py-4 rounded-[1.5rem] text-slate-400 hover:bg-red-50 hover:text-red-500 transition-all font-bold text-sm"

@@ -257,46 +257,146 @@ function TechSpecs({ specs }: { specs: TechSpec[] }) {
   );
 }
 
-// ---- Reviews --------------------------------------------------------------
+// ---- ProductReviews (self-fetching) ----------------------------------------
 
-function ReviewsList({ reviews }: { reviews: ProductReview[] }) {
-  if (!reviews || reviews.length === 0) return null;
+function StarRow({ filled, size = 16 }: { filled: boolean; size?: number }) {
+  return (
+    <Star
+      size={size}
+      className={filled ? 'text-amber-400 fill-amber-400' : 'text-slate-200 fill-slate-200'}
+    />
+  );
+}
+
+function ProductReviews({ productId }: { productId: string }) {
+  const [reviews, setReviews] = useState<ProductReview[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/products/${productId}/reviews`)
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data) => setReviews(Array.isArray(data) ? data : []))
+      .catch(() => setReviews([]))
+      .finally(() => setIsLoading(false));
+  }, [productId]);
+
+  if (isLoading) {
+    return (
+      <section className="py-16 px-6 max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">รีวิวจากลูกค้า</h2>
+          <div className="w-16 h-1.5 bg-[#22C55E] rounded-full mx-auto mt-4" />
+        </div>
+        <div className="flex justify-center py-12">
+          <Loader2 size={32} className="animate-spin text-[#22C55E]" />
+        </div>
+      </section>
+    );
+  }
+
+  if (reviews.length === 0) return null;
+
+  // ── Derived stats ──────────────────────────────────────────────────────────
+  const avg = reviews.reduce((s, r) => s + r.rating, 0) / reviews.length;
+  const roundedAvg = Math.round(avg * 10) / 10;
+  const distribution = [5, 4, 3, 2, 1].map((star) => ({
+    star,
+    count: reviews.filter((r) => r.rating === star).length,
+  }));
 
   return (
     <section className="py-16 px-6 max-w-7xl mx-auto">
+      {/* Section header */}
       <div className="text-center mb-12">
-        <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">Reviews</h2>
+        <h2 className="text-3xl lg:text-4xl font-black text-slate-800 tracking-tight">รีวิวจากลูกค้า</h2>
         <div className="w-16 h-1.5 bg-[#22C55E] rounded-full mx-auto mt-4" />
+        <p className="text-sm font-bold text-slate-400 mt-4 uppercase tracking-widest">
+          {reviews.length} รีวิวที่ผ่านการตรวจสอบ
+        </p>
       </div>
 
+      {/* Summary Card */}
+      <div className="max-w-2xl mx-auto mb-12 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm p-8 flex flex-col sm:flex-row items-center gap-8">
+        {/* Big average score */}
+        <div className="flex-shrink-0 text-center">
+          <p className="text-7xl font-black text-slate-900 tracking-tighter leading-none">
+            {roundedAvg.toFixed(1)}
+          </p>
+          <div className="flex gap-1 justify-center mt-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <StarRow key={i} filled={i < Math.round(avg)} size={18} />
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 font-bold mt-2 uppercase tracking-wider">
+            จาก {reviews.length} รีวิว
+          </p>
+        </div>
+
+        {/* Distribution bars */}
+        <div className="flex-1 w-full space-y-2">
+          {distribution.map(({ star, count }) => {
+            const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
+            return (
+              <div key={star} className="flex items-center gap-3">
+                <span className="text-xs font-black text-slate-500 w-4 text-right flex-shrink-0">{star}</span>
+                <Star size={11} className="text-amber-400 fill-amber-400 flex-shrink-0" />
+                <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-amber-400 rounded-full transition-all duration-700"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+                <span className="text-xs font-bold text-slate-400 w-4 flex-shrink-0">{count}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Review cards grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {reviews.map((review) => (
-          <div key={review.id} className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col h-full">
+          <div
+            key={review.id}
+            className="bg-white rounded-[2rem] p-6 shadow-sm border border-slate-100 flex flex-col h-full hover:shadow-md hover:shadow-[#22C55E]/5 hover:-translate-y-0.5 transition-all duration-200"
+          >
+            {/* Stars + date */}
             <div className="flex items-center justify-between mb-4">
-              <div className="flex gap-1">
+              <div className="flex gap-0.5">
                 {Array.from({ length: 5 }).map((_, i) => (
-                  <Star 
-                    key={i} 
-                    size={14} 
-                    className={i < review.rating ? 'text-amber-400 fill-amber-400' : 'text-slate-200'} 
-                  />
+                  <StarRow key={i} filled={i < review.rating} size={14} />
                 ))}
               </div>
-              <span className="text-xs text-slate-400 font-medium">
-                {new Date(review.createdAt).toLocaleDateString('th-TH')}
-              </span>
-            </div>
-            
-            <div className="flex items-center gap-2 mb-4">
-              <span className="font-black text-slate-800">{review.reviewerName || 'Anonymous'}</span>
-              <span className="bg-emerald-50 text-[#22C55E] text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
-                <CheckCircle2 size={10} /> Verified Owner
+              <span className="text-[11px] text-slate-400 font-medium">
+                {new Date(review.createdAt).toLocaleDateString('th-TH', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })}
               </span>
             </div>
 
-            <p className="text-sm text-slate-600 leading-relaxed font-medium">
-              {review.comment}
-            </p>
+            {/* Reviewer */}
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center text-white text-xs font-black flex-shrink-0">
+                {(review.reviewerName ?? 'ผ')[0]}
+              </div>
+              <div>
+                <p className="font-black text-slate-800 text-sm leading-tight">
+                  {review.reviewerName ?? 'ผู้ใช้งาน'}
+                </p>
+                <span className="bg-emerald-50 text-[#22C55E] text-[10px] font-bold px-2 py-0.5 rounded-full inline-flex items-center gap-1">
+                  <CheckCircle2 size={9} strokeWidth={2.5} /> Verified
+                </span>
+              </div>
+            </div>
+
+            {/* Comment */}
+            {review.comment && (
+              <p className="text-sm text-slate-600 leading-relaxed font-medium flex-1">
+                &ldquo;{review.comment}&rdquo;
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -669,7 +769,7 @@ export default function ProductDetailPage({ params }: { params: Promise<{ id: st
         {product.techSpecs && <TechSpecs specs={product.techSpecs} />}
 
         {/* ===================== Reviews ===================== */}
-        {product.reviews && product.reviews.length > 0 && <ReviewsList reviews={product.reviews} />}
+        <ProductReviews productId={id} />
 
         {/* ===================== Related / Extra info section ===================== */}
         <section className="bg-white border-t border-slate-100 py-16 px-6 mt-8">

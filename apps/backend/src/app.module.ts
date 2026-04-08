@@ -10,6 +10,7 @@ import { CustomersModule } from './modules/customers/customers.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { CouponsModule } from './modules/coupons/coupons.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
+import { ReviewsModule } from './modules/reviews/reviews.module';
 
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -25,7 +26,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     CustomersModule, 
     OrdersModule,
     CouponsModule,
-    AddressesModule
+    AddressesModule,
+    ReviewsModule,
   ],
   controllers: [],
   providers: [],
