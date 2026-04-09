@@ -3,8 +3,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { 
   Save, UploadCloud, User, MonitorPlay, Loader2, Image as ImageIcon, 
-  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag, Plus, Info 
+  Type, Link as LinkIcon, Trash2, Eye, EyeOff, Settings, ShoppingBag, Plus, Info, 
+  UserCog 
 } from 'lucide-react';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { STORAGE_KEYS } from '../../../lib/storageKeys';
 
 const API_BASE = 'http://localhost:4000/api';
 
@@ -210,8 +213,23 @@ export default function AdminSettingsPage() {
 
       if (!res.ok) throw new Error('บันทึกการตั้งค่าไม่สำเร็จ');
       
+      // Update global reactivity for the user display name
+      if (settings.adminName) {
+        useAuthStore.getState().updateUser({ name: settings.adminName });
+        
+        // Also update local storage so it persists if the user manually reloads
+        const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
+        if (savedUser) {
+          const parsed = JSON.parse(savedUser);
+          parsed.name = settings.adminName;
+          localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(parsed));
+        }
+      }
+
+      // Notify Navbar to refetch the admin avatar reacting to this change
+      window.dispatchEvent(new Event('kbon-settings-updated'));
+
       alert('บันทึกการตั้งค่าระบบเรียบร้อยแล้ว');
-      window.location.reload();
     } catch (error) {
       alert('เกิดข้อผิดพลาดในการบันทึกข้อมูล');
       console.error(error);
@@ -293,44 +311,44 @@ export default function AdminSettingsPage() {
         <div className="flex-1 w-full min-w-0 space-y-8 pb-10">
 
           {/* ================= TAB 1: GENERAL ================= */}
-          <div className={`space-y-8 transition-all duration-500 ${activeTab === 'general' ? 'opacity-100 block' : 'hidden opacity-0'}`}>
+          <div className={`space-y-6 transition-all duration-500 ${activeTab === 'general' ? 'opacity-100 block' : 'hidden opacity-0'}`}>
             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-8">
                 <div className="w-12 h-12 rounded-[1.2rem] bg-blue-50 text-blue-500 flex items-center justify-center shrink-0">
-                  <Settings size={22} />
+                  <User size={22} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-black text-slate-800">ข้อมูลผู้ดูแลระบบ (Admin Profile)</h2>
-                  <p className="text-xs font-medium text-slate-500 mt-2 flex items-center bg-slate-50 py-2 px-3 rounded-lg border border-slate-100 w-fit">
-                    <Info className="w-4 h-4 mr-2 text-blue-500 shrink-0" />
-                    จัดการชื่อและรูปภาพประจำตัวสำหรับแสดงผลในระบบ
-                  </p>
+                  <div className="flex items-center gap-3">
+                    <h2 className="text-xl font-black text-slate-800">ข้อมูลผู้ดูแลระบบ (Admin Profile)</h2>
+                    <span className="flex items-center text-[10px] font-bold bg-slate-100 text-slate-500 px-2.5 py-1 rounded-lg border border-slate-200 uppercase tracking-wider">
+                      <UserCog className="w-4 h-4 mr-1" /> Administrator
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <div className="flex flex-col md:flex-row gap-10">
+              <div className="flex flex-col md:flex-row gap-10 bg-slate-50/50 p-8 rounded-[2.5rem] border border-slate-100">
                 {/* Avatar Column */}
                 <div className="flex-shrink-0 w-full md:w-56 space-y-4">
-                  <div className="relative w-full aspect-square bg-slate-50 border-2 border-dashed border-slate-200 rounded-[2.5rem] overflow-hidden group">
+                  <div className="relative w-full aspect-square bg-white border-2 border-dashed border-slate-200 rounded-[2.5rem] overflow-hidden group shadow-sm transition-all hover:border-blue-300">
                     {settings.adminAvatarUrl ? (
                       <>
                         <img src={settings.adminAvatarUrl} alt="Admin Avatar" className="w-full h-full object-cover" />
                         <button 
                           onClick={() => clearMedia('adminAvatarUrl')}
-                          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-2 rounded-xl text-red-500 hover:bg-red-50 transition-colors shadow-sm opacity-0 group-hover:opacity-100"
+                          className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-xl text-red-500 hover:bg-red-50 transition-colors shadow-sm opacity-0 group-hover:opacity-100"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 size={18} />
                         </button>
                       </>
                     ) : (
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                      <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-400 p-6 text-center bg-slate-50/50">
                         {isUploading === 'adminAvatarUrl' ? (
                           <Loader2 size={32} className="animate-spin text-blue-500 mb-2" />
                         ) : (
                           <>
-                            <ImageIcon size={32} className="text-slate-300 mb-3" />
-                            <p className="text-xs font-bold">ว่างเปล่า</p>
-                            <p className="text-[10px] text-slate-400 mt-1 uppercase tracking-wider">ขนาดแนะนำ <br/> 300x300px</p>
+                            <ImageIcon size={36} className="text-slate-300 mb-3" />
+                            <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">อัปโหลดรูปภาพประจำตัว</p>
                           </>
                         )}
                       </div>
@@ -344,29 +362,31 @@ export default function AdminSettingsPage() {
                   <button 
                     onClick={() => avatarInputRef.current?.click()}
                     disabled={isUploading === 'adminAvatarUrl'}
-                    className="w-full py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-colors disabled:opacity-50"
+                    className="w-full py-4 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-2xl font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-sm hover:shadow disabled:opacity-50"
                   >
-                    <UploadCloud size={16} />อัปโหลดภาพโปรไฟล์
+                    <UploadCloud size={18} />เปลี่ยนภาพโปรไฟล์
                   </button>
                 </div>
 
                 {/* Info Column */}
-                <div className="flex-1 pt-2">
-                  <label className="block text-xs font-black uppercase tracking-widest text-slate-400 mb-2 flex items-center gap-2">
-                    <Type size={14} /> ชื่อแสดงผล (Display Name)
+                <div className="flex-1 flex flex-col justify-center">
+                  <label className="block text-[11px] font-black uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-2">
+                    <Type size={16} /> ชื่อแสดงผล (Display Name)
                   </label>
                   <input 
                     type="text" 
                     value={settings.adminName || ''}
                     onChange={(e) => handleChange('adminName', e.target.value)}
                     placeholder="เช่น Administrator / สมชาย"
-                    className="w-full bg-slate-50 border-none rounded-[1.5rem] py-4 px-6 text-sm font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 outline-none placeholder:font-normal"
+                    className="w-full bg-white border border-slate-200 rounded-[1.5rem] py-5 px-6 text-base font-bold text-slate-800 focus:ring-2 focus:ring-[#22C55E]/20 focus:border-[#22C55E] outline-none placeholder:font-normal shadow-sm transition-all"
                   />
-                  <p className="text-[11px] text-slate-500 mt-3 ml-2 font-medium flex items-center">
-                    <Info className="w-3 h-3 mr-1.5 text-slate-400" /> ชื่อนี้จะถูกนำไปแสดงในมุมขวาบนของ Admin Dashboard
-                  </p>
                 </div>
               </div>
+
+              <p className="text-sm font-medium text-slate-500 mt-6 flex items-start gap-2.5 ml-2">
+                <Info className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
+                ข้อมูลนี้จะถูกแสดงบน Navigation Bar เพื่อระบุตัวตนของคุณในขณะจัดการระบบ
+              </p>
             </div>
           </div>
 

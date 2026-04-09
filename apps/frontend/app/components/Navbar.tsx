@@ -24,14 +24,23 @@ export default function Navbar({ user }: { user?: any }) {
   const activeUser = isMounted ? (isAuthenticated ? authUser : null) : user;
 
   useEffect(() => {
-    if (activeUser?.role === 'ADMIN') {
-      fetch('http://localhost:4000/api/settings')
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.admin_avatar_url) setAdminAvatar(data.admin_avatar_url);
-        })
-        .catch((err) => console.error('Failed to fetch global settings for avatar', err));
-    }
+    const fetchAvatar = () => {
+      if (activeUser?.role === 'ADMIN') {
+        fetch('http://localhost:4000/api/settings')
+          .then((res) => res.json())
+          .then((data) => {
+            if (data.adminAvatarUrl) setAdminAvatar(data.adminAvatarUrl);
+          })
+          .catch((err) => console.error('Failed to fetch global settings for avatar', err));
+      }
+    };
+
+    fetchAvatar();
+
+    const handleUpdate = () => fetchAvatar();
+    window.addEventListener('kbon-settings-updated', handleUpdate);
+    
+    return () => window.removeEventListener('kbon-settings-updated', handleUpdate);
   }, [activeUser]);
 
   const initials = activeUser?.name
