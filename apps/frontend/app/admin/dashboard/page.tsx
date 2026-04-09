@@ -14,9 +14,11 @@ import {
   Loader2
 } from 'lucide-react';
 import api from '../../../lib/axios';
+import { toast } from 'sonner';
 
 export default function AdminDashboard() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isExporting, setIsExporting] = useState(false);
   const [data, setData] = useState({
     totalRevenue: 0,
     totalOrders: 0,
@@ -39,6 +41,30 @@ export default function AdminDashboard() {
     };
     fetchSummary();
   }, []);
+
+  const handleExport = async () => {
+    try {
+      setIsExporting(true);
+      const res = await api.get('/dashboard/export-orders', {
+        responseType: 'blob',
+      });
+      
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'orders-report.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      toast.success('ดาวน์โหลดรายงานสำเร็จ');
+    } catch (err) {
+      console.error('Export error', err);
+      toast.error('ดาวน์โหลดรายงานไม่สำเร็จ โปรดลองอีกครั้ง');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch(status) {
@@ -72,8 +98,13 @@ export default function AdminDashboard() {
             <p className="text-sm text-slate-500 font-medium mt-1">ติดตามยอดขายและสถานะการดำเนินงานของแพลตฟอร์ม</p>
           </div>
           <div className="flex gap-3 w-full md:w-auto">
-            <button className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 px-6 py-3 rounded-[1.2rem] text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-all">
-              <Download size={16} /> Export Report
+            <button 
+              onClick={handleExport}
+              disabled={isExporting}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 bg-white border border-slate-200 px-6 py-3 rounded-[1.2rem] text-sm font-bold text-slate-600 shadow-sm hover:bg-slate-50 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {isExporting ? <Loader2 size={16} className="animate-spin" /> : <Download size={16} />}
+              {isExporting ? 'กำลังส่งออก...' : 'Export Report'}
             </button>
           </div>
         </div>
@@ -222,10 +253,12 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
-
-            <button className="w-full mt-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm transition-colors">
+            <Link 
+              href="/admin/products"
+              className="w-full mt-6 py-4 bg-slate-50 hover:bg-slate-100 text-slate-600 rounded-2xl font-bold text-sm transition-colors text-center inline-block"
+            >
               ดูรายงานสินค้าเพิ่มเติม
-            </button>
+            </Link>
           </div>
 
         </div>

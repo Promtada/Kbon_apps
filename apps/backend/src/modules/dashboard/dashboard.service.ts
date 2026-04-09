@@ -95,4 +95,27 @@ export class DashboardService {
       topProducts,
     };
   }
+
+  async getExportOrdersCsv(): Promise<string> {
+    const orders = await this.prisma.order.findMany({
+      orderBy: { createdAt: 'desc' },
+      include: { user: true },
+    });
+
+    const header = ['Order ID', 'Date', 'Customer Name', 'Status', 'Total Amount'].join(',');
+    
+    // Add BOM for Excel UTF-8 display
+    let csvStr = '\uFEFF' + header + '\n';
+    
+    orders.forEach(order => {
+      const date = order.createdAt.toISOString().split('T')[0];
+      const customerName = `"${order.user?.name || 'Guest User'}"`;
+      const amount = order.totalAmount.toString();
+      
+      const row = [order.id, date, customerName, order.status, amount].join(',');
+      csvStr += row + '\n';
+    });
+
+    return csvStr;
+  }
 }

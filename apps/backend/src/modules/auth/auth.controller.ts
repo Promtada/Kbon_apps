@@ -38,6 +38,13 @@ export class AuthController {
     return this.authService.updateProfile(req.user.id, dto);
   }
 
+  // --- 🌟 ใหม่: อัปเดตรหัสผ่านของตัวเอง ---
+  @Patch('me/password')
+  @UseGuards(JwtAuthGuard)
+  async updatePassword(@Req() req, @Body() dto: import('./dto/update-password.dto').UpdatePasswordDto) {
+    return this.authService.updatePassword(req.user.id, dto);
+  }
+
   @Get()
   findAll() {
     return this.authService.findAll();

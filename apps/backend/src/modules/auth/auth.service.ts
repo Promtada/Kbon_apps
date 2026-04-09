@@ -11,6 +11,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { CreateAuthDto } from './dto/create-auth.dto';
 import { UpdateAuthDto } from './dto/update-auth.dto';
 import { UpdateProfileDto } from './dto/update-profile.dto';
+import { UpdatePasswordDto } from './dto/update-password.dto';
 
 @Injectable()
 export class AuthService {
@@ -19,19 +20,19 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  // --- 🌟 ฟังก์ชันช่วยสร้าง Tokens คู่ (Access & Refresh) ---
+  // --- Helper function to generate Access & Refresh Tokens ---
   private async generateTokens(userId: string, email: string, role: string) {
     const payload = { sub: userId, email, role };
     
     const [accessToken, refreshToken] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: '15m' }), // ใบหลัก 15 นาที
-      this.jwtService.signAsync(payload, { expiresIn: '7d' }),  // ใบสำรอง 7 วัน
+      this.jwtService.signAsync(payload, { expiresIn: '15m' }), // 15 minutes
+      this.jwtService.signAsync(payload, { expiresIn: '7d' }),  // 7 days
     ]);
 
     return { accessToken, refreshToken };
   }
 
-  // --- 1. ฟังก์ชัน Login (อัปเกรดให้สร้าง Session) ---
+  // --- Login function (creates Session) ---
   async login(loginDto: any) {
     const { email, password } = loginDto;
 
@@ -43,12 +44,12 @@ export class AuthService {
 
     const tokens = await this.generateTokens(user.id, user.email, user.role);
 
-    // บันทึกลงตาราง Session (Refresh Token Rotation)
+    // Save to Session table (Refresh Token Rotation)
     await this.prisma.session.create({
       data: {
         userId: user.id,
         refreshToken: tokens.refreshToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 วัน
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
       },
     });
 
@@ -63,13 +64,13 @@ export class AuthService {
     };
   }
 
-  // --- 🌟 ฟังก์ชันใหม่: ใช้กุญแจสำรองมาแลกกุญแจใหม่ (Refresh) ---
+  // --- Refresh Token function ---
   async refresh(refreshToken: string) {
     try {
-      // 1. ตรวจสอบความถูกต้องของ Token (Verify JWT)
+      // 1. Verify JWT
       const payload = await this.jwtService.verifyAsync(refreshToken);
       
-      // 2. เช็คในตาราง Session ว่ามีกุญแจนี้จริงและยังไม่หมดอายุ
+      // 2. Check if token exists in Session and is not expired
       const session = await this.prisma.session.findUnique({
         where: { refreshToken },
       });
@@ -79,10 +80,10 @@ export class AuthService {
         throw new UnauthorizedException('Session expired');
       }
 
-      // 3. สร้างกุญแจชุดใหม่
+      // 3. Generate new tokens
       const newTokens = await this.generateTokens(payload.sub, payload.email, payload.role);
 
-      // 4. อัปเดต Session เดิมด้วยกุญแจใหม่ (Rotate)
+      // 4. Update existing session (Rotate)
       await this.prisma.session.update({
         where: { id: session.id },
         data: {
@@ -97,7 +98,7 @@ export class AuthService {
     }
   }
 
-  // --- 2. ฟังก์ชันเดิม (คงไว้ทั้งหมด) ---
+  // --- Standard CRUD Methods ---
   async register(createAuthDto: CreateAuthDto) {
     const { email, password, name } = createAuthDto;
     if (!email?.trim() || !password?.trim()) {
@@ -140,7 +141,7 @@ export class AuthService {
     });
   }
 
-  // --- 🌟 อัปเดตโปรไฟล์ของ User ที่ล็อกอินอยู่ ---
+  // --- Update Logged-in User Profile ---
   async updateProfile(userId: string, dto: UpdateProfileDto) {
     await this.findOne(userId);
 
@@ -161,5 +162,29 @@ export class AuthService {
   async remove(id: string) {
     await this.findOne(id);
     return this.prisma.user.delete({ where: { id } });
+  }
+
+  // --- Update User Password ---
+  async updatePassword(userId: string, dto: UpdatePasswordDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    const isPasswordValid = await bcrypt.compare(dto.currentPassword, user.password);
+    if (!isPasswordValid) {
+      throw new BadRequestException('รหัสผ่านปัจจุบันไม่ถูกต้อง');
+    }
+
+    if (dto.currentPassword === dto.newPassword) {
+      throw new BadRequestException('รหัสผ่านใหม่ต้องไม่ซ้ำกับรหัสผ่านเดิม');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
+    
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { password: hashedPassword }
+    });
+
+    return { success: true, message: 'อัปเดตรหัสผ่านสำเร็จ' };
   }
 }
