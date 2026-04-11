@@ -1,115 +1,60 @@
-# Kbon E-Commerce Platform
+📦 สิ่งที่ต้องมีในเครื่อง (Prerequisites)
+Docker Desktop: ดาวน์โหลดที่นี่ (ต้องติดตั้งและเปิดโปรแกรมไว้ก่อนรัน)
 
-A Full-stack E-commerce Platform built with a modern Monorepo architecture. 
+Stripe CLI: (เฉพาะเมื่อต้องการทดสอบระบบชำระเงิน) วิธีติดตั้ง
 
-## 🌟 Project Overview
-The Kbon Platform is a comprehensive e-commerce solution offering robust frontend and backend services, efficiently managed using Turborepo. It leverages a powerful tech stack tailored for high performance, seamless development, and scalability:
-- **Frontend**: Next.js (React), Tailwind CSS
-- **Backend**: NestJS (Node.js)
-- **Database**: PostgreSQL with Prisma ORM
-- **Payments**: Stripe Integration
-- **Package Manager**: pnpm workspaces
+🔑 ขั้นตอนที่ 1: ตั้งค่ากุญแจระบบ (.env)
+เพื่อนต้องสร้างไฟล์ .env ไว้ใน 2 ตำแหน่งหลัก โดยก๊อปปี้ค่าด้านล่างนี้ไปวางได้เลยครับ:
 
-## 🔧 Prerequisites
-Make sure you have the following tools installed on your machine before getting started:
-- [Node.js](https://nodejs.org/) (v18+ recommended)
-- [pnpm](https://pnpm.io/) (v8+)
-- [Docker & Docker Compose](https://www.docker.com/) (For running PostgreSQL locally)
-- [Stripe CLI](https://stripe.com/docs/stripe-cli) (For testing webhooks)
-
-## 🔐 Environment Variables
-
-You need to set up your environment variables before running the application.
-
-### Backend (`apps/backend/.env`)
-Create a `.env` file in the `apps/backend` directory using the following format:
-
-```env
-# Database connection
+1. ไฟล์สำหรับ Backend (apps/backend/.env)
+Code snippet
 DATABASE_URL="postgresql://postgres:password@localhost:5434/kbon_db?schema=public"
 
-# Authentication
-JWT_SECRET="Your_Super_Secret_JWT_Key"
+JWT_SECRET="Kbon_Super_Secret_Key_2026"
 JWT_EXPIRES_IN="7d"
 
-# Stripe Settings
-STRIPE_SECRET_KEY=sk_test_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-```
 
-### Frontend (if applicable, e.g. `apps/frontend/.env.local`)
-Create an `.env.local` file in the `apps/frontend` directory:
+# Stripe API Keys 
+STRIPE_SECRET_KEY=.........
+STRIPE_WEBHOOK_SECRET=.........
+2. ไฟล์สำหรับ Database (packages/database/.env)
+Code snippet
+DATABASE_URL="postgresql://postgres:password@localhost:5434/kbon_db?schema=public"
 
-```env
-NEXT_PUBLIC_API_URL=http://localhost:4000/api
-```
+JWT_SECRET="Kbon_Super_Secret_Key_2026"
+JWT_EXPIRES_IN="7d"
 
-## 📦 Installation
+🚀 ขั้นตอนที่ 2: เริ่มต้นรันระบบ (Build & Start)
+เปิด Terminal ที่โฟลเดอร์นอกสุดของโปรเจกต์ (Root) แล้วพิมพ์คำสั่งประกาศิตนี้:
 
-This project uses Turborepo and pnpm workspaces. Install all dependencies from the root directory:
+Bash
+docker-compose up -d --build
+(รอจนกว่า Docker จะประกอบร่างเสร็จและขึ้นสถานะ Started ครบทุกบริการ)
 
-```bash
-pnpm install
-```
+💾 ขั้นตอนที่ 3: เตรียมฐานข้อมูล (Database Init)
+เนื่องจากฐานข้อมูลที่รันครั้งแรกจะว่างเปล่า ให้รันคำสั่งนี้เพียง ครั้งเดียว เพื่อสร้างตารางและลงข้อมูลสินค้าตัวอย่าง (Seed Data):
 
-## 🗄️ Database Setup
+Bash
+docker-compose run --rm backend sh -c "cd packages/database && npx prisma db push && npx prisma db seed"
+🌐 ช่องทางการเข้าใช้งาน
+Frontend (หน้าบ้าน): http://localhost:3000
 
-We use Docker to quickly spin up a PostgreSQL instance. The `docker-compose.yml` file is located at the root of the project.
+Backend (API Docs): http://localhost:4000/api
 
-1. **Start the Database**
-   ```bash
-   docker compose up -d
-   ```
-   *(This starts Postgres on port 5434 based on the default configuration)*
+💳 การทดสอบระบบชำระเงิน (Stripe Webhook)
+หากต้องการทดสอบ Flow การซื้อสินค้า ให้เปิด Terminal อีกหน้าหนึ่งแล้วรันคำสั่งนี้ทิ้งไว้เพื่อเชื่อมต่อกับ Stripe:
 
-2. **Run Migrations**
-   Navigate to the backend app to apply the schema to your database:
-   ```bash
-   cd apps/backend
-   npx prisma migrate dev
-   ```
+Bash
+.\stripe listen --forward-to localhost:4000/api/orders/webhook
+(หากได้รับ Webhook Secret ใหม่จากหน้าจอ CLI ให้นำไปอัปเดตค่า STRIPE_WEBHOOK_SECRET ในไฟล์ .env ของ Backend แล้วสั่ง docker-compose restart backend หนึ่งครั้ง)
 
-3. **Seed the Database**
-   Populate the database with initial dummy data:
-   ```bash
-   npx prisma db seed
-   ```
+🔧 คำสั่งที่มีประโยชน์ (Useful Commands)
+ดู Log ของหลังบ้าน: docker logs -f kbon-backend
 
-## 💳 Stripe Setup (Crucial)
+หยุดการทำงานทั้งหมด: docker-compose down
 
-To test payments and webhooks locally, you must connect the Stripe CLI to your account and forward events to your local NestJS backend.
+ล้างข้อมูลใหม่ทั้งหมด: docker-compose down -v (คำสั่งนี้จะลบข้อมูลใน Database ทิ้งด้วย)
 
-1. **Login to Stripe CLI**
-   ```bash
-   stripe login
-   ```
-   Follow the prompt in your browser to authenticate.
+อัปเดตโค้ดหลังแก้ไฟล์: docker-compose up -d --build
 
-2. **Start the Webhook Listener**
-   Forward webhook events to your backend's Stripe webhook endpoint:
-   ```bash
-   .\stripe listen --forward-to localhost:4000/api/orders/webhook
-   ```
-   *(Make sure to adjust the port or path if your backend is running elsewhere)*
-
-3. **Configure the Webhook Secret**
-   After running the `stripe listen` command, the CLI will output a webhook signing secret that looks like this: `whsec_...`. 
-   Copy this value and place it in your `apps/backend/.env` file:
-   ```env
-   STRIPE_WEBHOOK_SECRET=whsec_your_secret_from_cli
-   ```
-
-## 🚀 Running the Application
-
-To start all applications (Frontend and Backend) simultaneously in development mode, run the following command from the root directory:
-
-```bash
-pnpm dev
-```
-
-- **Frontend** will be available at: `http://localhost:3000`
-- **Backend API** will be available at: `http://localhost:4000`
-
----
-
-Happy coding! 🚀
+Happy Coding! 🚀 (By KBON Team)
