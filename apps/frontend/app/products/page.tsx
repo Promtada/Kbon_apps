@@ -48,7 +48,8 @@ interface Product {
 
 // ---- Constants ------------------------------------------------------------
 
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../lib/axios';
+
 const ITEMS_PER_PAGE = 8;
 
 const CATEGORIES = ['ทั้งหมด', 'Automation', 'Set', 'Nutrient', 'Hardware'];

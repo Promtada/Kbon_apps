@@ -21,7 +21,7 @@ async function bootstrap() {
 
   // 1. ปลดล็อค CORS: สำคัญมากเพื่อให้ Frontend (พอร์ต 3000) ยิงมาหา Backend (พอร์ต 4000) ได้
   app.enableCors({
-    origin: 'http://localhost:3000', // ระบุ URL ของหน้าเว็บเรา
+    origin: process.env.CORS_ORIGIN || true, // true = allow all origins (safe for local/Docker dev)
     credentials: true,
   });
 
@@ -38,7 +38,7 @@ async function bootstrap() {
   );
 
   const port = process.env.PORT ?? 4000;
-  await app.listen(port);
+  await app.listen(port, '0.0.0.0');
   
   // พิมพ์ข้อความให้เรากดยิงได้ง่ายๆ ในหน้าจอ Terminal
   console.log(`\n🚀 Kbon Backend is running on: http://localhost:${port}/api\n`);

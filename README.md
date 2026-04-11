@@ -41,7 +41,7 @@ STRIPE_WEBHOOK_SECRET=whsec_...
 Create an `.env.local` file in the `apps/frontend` directory:
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_API_URL=http://localhost:4000/api
 ```
 
 ## 📦 Installation

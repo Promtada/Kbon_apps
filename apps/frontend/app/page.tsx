@@ -6,6 +6,7 @@ import Footer from './components/Footer';
 import { ArrowRight, Package, AlertCircle, ShieldCheck, Droplet, Cpu, HeadphonesIcon, Star, User } from 'lucide-react';
 import Link from 'next/link';
 import { STORAGE_KEYS } from '../lib/storageKeys';
+import { API_BASE } from '../lib/axios';
 import { HeroCarousel } from '../components/shared/HeroCarousel';
 import { ProductCard } from '../components/shared/ProductCard';
 
@@ -44,8 +45,8 @@ export default function LandingPage() {
       setError(null);
       try {
         const [productsRes, settingsRes] = await Promise.all([
-          fetch('http://localhost:4000/api/products?sortBy=createdAt&sortOrder=desc'),
-          fetch('http://localhost:4000/api/settings')
+          fetch(`${API_BASE}/products?sortBy=createdAt&sortOrder=desc`),
+          fetch(`${API_BASE}/settings`)
         ]);
         
         if (!productsRes.ok || !settingsRes.ok) {

@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
+  # ─── PostgreSQL ──────────────────────────────────────────────
   postgres:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     container_name: kbon-postgres
     ports:
-      - "5434:5432" # ใช้พอร์ต 5434 ข้างนอก เพื่อป้องกันการชนกับโปรแกรมอื่นในเครื่อง
+      - "5434:5432"
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
@@ -13,16 +12,62 @@ services:
     volumes:
       - kbon-pg-data:/var/lib/postgresql/data
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d kbon_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
 
+  # ─── Redis ───────────────────────────────────────────────────
   redis:
     image: redis:7-alpine
     container_name: kbon-redis
     ports:
-      - "6380:6379" # ใช้พอร์ต 6380 ข้างนอก
+      - "6380:6379"
     volumes:
       - kbon-redis-data:/data
+    restart: unless-stopped
+
+  # ─── Backend (NestJS) ───────────────────────────────────────
+  backend:
+    build:
+      context: .
+      dockerfile: apps/backend/Dockerfile
+    container_name: kbon-backend
+    ports:
+      - "4000:4000"
+    environment:
+      NODE_ENV: production
+      PORT: 4000
+      DATABASE_URL: postgresql://postgres:password@postgres:5432/kbon_db
+      JWT_SECRET: super-secret-jwt-key-change-in-production
+    env_file:
+      - ./apps/backend/.env
+    volumes:
+      - backend-uploads:/app/apps/backend/uploads
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ─── Frontend (Next.js) ─────────────────────────────────────
+  frontend:
+    build:
+      context: .
+      dockerfile: apps/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+    container_name: kbon-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:4000
+    depends_on:
+      - backend
     restart: unless-stopped
 
 volumes:
   kbon-pg-data:
   kbon-redis-data:
+  backend-uploads:

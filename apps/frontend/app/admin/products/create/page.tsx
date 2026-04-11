@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { ProductImageUpload } from '../../../../components/shared/ProductImageUpload';
 import { ImageUploadField } from '../../../../components/shared/ImageUploadField';
 import { ArrowLeft, UploadCloud, Save, Plus, Trash2, ShieldCheck, Eye, EyeOff } from 'lucide-react';
+import { API_BASE } from '../../../../lib/axios';
 
 interface IncludedItem {
   title: string;
@@ -99,7 +100,7 @@ export default function CreateProductPage() {
     };
 
     try {
-      const res = await fetch('http://localhost:4000/api/products', {
+      const res = await fetch(`${API_BASE}/products`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

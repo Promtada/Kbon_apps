@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import { ShoppingCart, User, LogOut } from 'lucide-react';
 import { useCart } from '../../store/useCartStore';
 import { useAuthStore } from '../../store/useAuthStore';
+import { API_BASE } from '../../lib/axios';
 
 export default function Navbar({ user }: { user?: any }) {
   const pathname = usePathname();
@@ -26,7 +27,7 @@ export default function Navbar({ user }: { user?: any }) {
   useEffect(() => {
     const fetchAvatar = () => {
       if (activeUser?.role === 'ADMIN') {
-        fetch('http://localhost:4000/api/settings')
+        fetch(`${API_BASE}/settings`)
           .then((res) => res.json())
           .then((data) => {
             if (data.adminAvatarUrl) setAdminAvatar(data.adminAvatarUrl);

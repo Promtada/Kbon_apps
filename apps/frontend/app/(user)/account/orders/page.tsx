@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams, useRouter } from 'next/navigation';
 import api from '../../../../lib/axios';
@@ -124,7 +124,37 @@ function formatOrderId(id: string) {
 }
 
 // ═══════════════════════════════════════════════════
+// Suspense-wrapped default export (Next.js requires this for useSearchParams)
 export default function OrdersPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="space-y-6">
+          <PageHeader count={0} loading />
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="bg-white rounded-2xl border border-slate-100 p-6 animate-pulse">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-slate-100 rounded-xl" />
+                  <div className="space-y-2">
+                    <div className="w-28 h-4 bg-slate-100 rounded-lg" />
+                    <div className="w-40 h-3 bg-slate-50 rounded-lg" />
+                  </div>
+                </div>
+                <div className="w-24 h-7 bg-slate-100 rounded-full" />
+              </div>
+              <div className="h-16 bg-slate-50 rounded-xl" />
+            </div>
+          ))}
+        </div>
+      }
+    >
+      <OrdersPageContent />
+    </Suspense>
+  );
+}
+
+function OrdersPageContent() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);

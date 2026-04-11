@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
+import { API_BASE } from '../../../lib/axios';
 import { useRouter } from 'next/navigation';
 import Cookies from 'js-cookie';
 import Link from 'next/link';
@@ -47,7 +48,7 @@ export default function LoginPage() {
 
     // Token exists — verify it against the server before trusting Zustand state.
     axios
-      .get('http://localhost:4000/api/auth/me', {
+      .get(`${API_BASE}/auth/me`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       .then((res) => {
@@ -77,7 +78,7 @@ export default function LoginPage() {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post('http://localhost:4000/api/auth/login', {
+      const response = await axios.post(`${API_BASE}/auth/login`, {
         email,
         password,
       });

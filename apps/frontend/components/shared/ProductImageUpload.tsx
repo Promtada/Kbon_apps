@@ -2,8 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { UploadCloud, Image as ImageIcon, Loader2, RefreshCw } from 'lucide-react';
-
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../lib/axios';
 
 interface ProductImageUploadProps {
   value?: string;

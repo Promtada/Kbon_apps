@@ -53,7 +53,7 @@ interface CustomerDetail {
   addresses: Address[];
 }
 
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../../../lib/axios';
 
 const STATUS_COLORS: Record<string, string> = {
   PENDING: 'bg-amber-50 text-amber-600 border-amber-200',

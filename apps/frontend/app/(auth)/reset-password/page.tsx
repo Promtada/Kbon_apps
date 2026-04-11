@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, Suspense } from 'react';
-import axios from 'axios';
+import api from '../../../lib/axios';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 
@@ -33,7 +33,7 @@ function ResetPasswordForm() {
 
     setLoading(true);
     try {
-      await axios.post('http://localhost:4000/api/auth/reset-password', {
+      await api.post('/auth/reset-password', {
         token,
         newPassword: password,
       });

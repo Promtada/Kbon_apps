@@ -77,7 +77,7 @@ interface Product {
 
 // ---- Constants ------------------------------------------------------------
 
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../../lib/axios';
 
 // ---- Image Gallery --------------------------------------------------------
 

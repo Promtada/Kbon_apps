@@ -15,7 +15,7 @@ interface Customer {
   totalSpent: number;
 }
 
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../../lib/axios';
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);

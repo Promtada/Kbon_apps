@@ -3,8 +3,13 @@ import Cookies from 'js-cookie';
 import { STORAGE_KEYS } from './storageKeys';
 import { useAuthStore } from '../store/useAuthStore';
 
+// ─── Centralized API Base URL ────────────────────────────────────────────────
+// All frontend API calls MUST use this constant (or the `api` axios instance).
+// Falls back to localhost:4000 so local dev works even without an .env file.
+export const API_BASE = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/api`;
+
 const api = axios.create({
-  baseURL: 'http://localhost:4000/api',
+  baseURL: API_BASE,
   timeout: 10000,
 });
 
@@ -40,7 +45,7 @@ api.interceptors.response.use(
         if (!refreshToken) throw new Error('No refresh token available');
 
         // Attempt to exchange the refresh token for a new access token
-        const res = await axios.post('http://localhost:4000/api/auth/refresh', {
+        const res = await axios.post(`${API_BASE}/auth/refresh`, {
           refreshToken,
         });
 

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import axios from 'axios';
+import api from '../../../lib/axios';
 import Link from 'next/link';
 
 export default function ForgotPasswordPage() {
@@ -18,7 +18,7 @@ export default function ForgotPasswordPage() {
 
     try {
       // ตรงนี้คือ API ฝั่ง Backend ที่จะทำหน้าที่ส่งเมล
-      await axios.post('http://localhost:4000/api/auth/forgot-password', { email });
+      await api.post('/auth/forgot-password', { email });
       setMessage('เราได้ส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมลของคุณเรียบร้อยแล้ว');
     } catch (err: any) {
       setError(err.response?.data?.message || 'ไม่พบอีเมลนี้ในระบบ หรือเกิดข้อผิดพลาด');

@@ -9,7 +9,7 @@ import {
 import { useAuthStore } from '../../../store/useAuthStore';
 import { STORAGE_KEYS } from '../../../lib/storageKeys';
 
-const API_BASE = 'http://localhost:4000/api';
+import { API_BASE } from '../../../lib/axios';
 
 export interface SiteBanner {
   id?: string;
