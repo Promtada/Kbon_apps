@@ -1,37 +1,62 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
+import Link from 'next/link';
+import { AlertCircle, ArrowRight, Package } from 'lucide-react';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
-import { ArrowRight, Package, AlertCircle, ShieldCheck, Droplet, Cpu, HeadphonesIcon, Star, User } from 'lucide-react';
-import Link from 'next/link';
 import { STORAGE_KEYS } from '../lib/storageKeys';
 import { API_BASE } from '../lib/axios';
-import { HeroCarousel } from '../components/shared/HeroCarousel';
 import { ProductCard } from '../components/shared/ProductCard';
+import { HeroSection } from './components/landing/HeroSection';
+import { FeatureSection } from './components/landing/FeatureSection';
+import { HowItWorksSection } from './components/landing/HowItWorksSection';
+import { SocialProofSection } from './components/landing/SocialProofSection';
+import { CtaSection } from './components/landing/CtaSection';
+import type { LandingMetrics, Product, SiteSettings } from './components/landing/types';
 
-interface Product {
-  id: string;
+interface LandingUser {
+  id?: string;
   name: string;
-  description: string;
-  price: number;
-  originalPrice?: number | null;
-  stock: number;
-  category: string;
-  warranty?: string | null;
-  features: string[];
-  isPublished: boolean;
-  mainImageUrl?: string | null;
+  role: string;
+  image?: string | null;
+}
+
+const initialMetrics: LandingMetrics = {
+  totalProducts: 0,
+  startingPrice: null,
+  activeTestimonials: 0,
+};
+
+function FeaturedProductsSkeleton() {
+  return (
+    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+      {Array.from({ length: 4 }).map((_, index) => (
+        <div
+          key={index}
+          className="h-[430px] animate-pulse rounded-2xl border border-slate-100 bg-white p-4"
+        >
+          <div className="aspect-square rounded-xl bg-slate-50" />
+          <div className="mt-5 space-y-3 px-1">
+            <div className="h-4 w-1/3 rounded-full bg-slate-100" />
+            <div className="h-5 w-4/5 rounded-full bg-slate-100" />
+            <div className="h-4 w-full rounded-full bg-slate-100" />
+            <div className="h-4 w-2/3 rounded-full bg-slate-100" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function LandingPage() {
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<LandingUser | null>(null);
   const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [settings, setSettings] = useState<SiteSettings | null>(null);
+  const [metrics, setMetrics] = useState<LandingMetrics>(initialMetrics);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [settings, setSettings] = useState<any>(null);
 
-  // เช็คสถานะ Login เพื่อส่งไปให้ Navbar โชว์ Profile
   useEffect(() => {
     const savedUser = localStorage.getItem(STORAGE_KEYS.USER);
     if (savedUser) {
@@ -40,184 +65,124 @@ export default function LandingPage() {
   }, []);
 
   useEffect(() => {
-    const fetchFeaturedProductsAndSettings = async () => {
+    const fetchLandingData = async () => {
       setIsLoading(true);
       setError(null);
+
       try {
         const [productsRes, settingsRes] = await Promise.all([
           fetch(`${API_BASE}/products?sortBy=createdAt&sortOrder=desc`),
-          fetch(`${API_BASE}/settings`)
+          fetch(`${API_BASE}/settings`),
         ]);
-        
+
         if (!productsRes.ok || !settingsRes.ok) {
           throw new Error('Failed to fetch data');
         }
 
-        const data: Product[] = await productsRes.json();
-        const settingsData = await settingsRes.json();
+        const productsData: Product[] = await productsRes.json();
+        const settingsData: SiteSettings = await settingsRes.json();
+        const publishedProducts = productsData.filter((product) => product.isPublished);
+        const activeTestimonials =
+          settingsData.testimonials?.filter((testimonial) => testimonial.isActive).length || 0;
 
-        // Filter out unpublished and take top 4
-        setFeaturedProducts(data.filter(p => p.isPublished).slice(0, 4));
+        setFeaturedProducts(publishedProducts.slice(0, 4));
         setSettings(settingsData);
-      } catch (err) {
-        console.error('Failed to fetch landing page data:', err);
-        setError('ไม่สามารถโหลดข้อมูลสินค้าได้');
+        setMetrics({
+          totalProducts: publishedProducts.length,
+          startingPrice:
+            publishedProducts.length > 0
+              ? publishedProducts.reduce(
+                (lowestPrice, product) => Math.min(lowestPrice, product.price),
+                publishedProducts[0].price
+              )
+              : null,
+          activeTestimonials,
+        });
+      } catch (fetchError) {
+        console.error('Failed to fetch landing page data:', fetchError);
+        setError('ไม่สามารถโหลดข้อมูลหน้าเว็บไซต์ได้ในขณะนี้');
       } finally {
         setIsLoading(false);
       }
     };
-    fetchFeaturedProductsAndSettings();
+
+    fetchLandingData();
   }, []);
 
   return (
-    <div className="flex flex-col min-h-screen bg-[#F8FAFC] text-slate-900 font-sans">
-      {/* 🌟 ส่ง user ไปให้ Navbar เพื่อให้ Profile Dropdown ทำงาน */}
+    <div className="flex min-h-screen flex-col bg-white text-slate-900">
       <Navbar user={user} />
 
-      <main className="flex-grow">
-        {/* --- Hero Section --- */}
-        <HeroCarousel settings={settings} />
+      <main className="flex-1">
+        <HeroSection settings={settings} metrics={metrics} featuredProducts={featuredProducts} />
+        <FeatureSection />
+        <HowItWorksSection />
 
-        {/* --- What We Do (Features) Section --- */}
-        <section className="py-20 bg-[#F8FAFC] relative z-10 -mt-10">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="text-center mb-16">
-              <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">ยกระดับการปลูกผักไฮโดรโปนิกส์ด้วยเทคโนโลยี</h2>
-              <p className="text-slate-500 mt-4 max-w-2xl mx-auto font-medium">
-                (Smart Farming for Everyone) ค้นพบโซลูชันที่ทำให้การดูแลฟาร์มของคุณง่ายขึ้น ประหยัดเวลา และได้ผลผลิตที่สม่ำเสมอกว่าเดิม
+        {/* Featured Products */}
+        <section id="products" className="section-shell">
+          <div className="page-shell">
+            {/* Section Header */}
+            <div className="mx-auto max-w-2xl text-center">
+              <div className="section-kicker mx-auto">Featured Products</div>
+              <h2 className="section-title mt-6">
+                สินค้าแนะนำสำหรับฟาร์มยุคใหม่
+              </h2>
+              <p className="section-copy mt-4">
+                คัดสรรอุปกรณ์และระบบที่ทีมฟาร์มเลือกใช้มากที่สุด
+                พร้อมรายละเอียดที่ช่วยตัดสินใจได้เร็วขึ้น
               </p>
             </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 bg-emerald-50 text-[#22C55E] rounded-2xl flex items-center justify-center mb-6">
-                  <Cpu size={28} />
-                </div>
-                <h3 className="text-xl font-black text-slate-800 mb-3">Automation System</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  ระบบอัตโนมัติอัจฉริยะ ควบคุมการจ่ายน้ำและปุ๋ยได้อย่างแม่นยำตลอด 24 ชั่วโมง
-                </p>
-              </div>
-              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 bg-blue-50 text-blue-500 rounded-2xl flex items-center justify-center mb-6">
-                  <Droplet size={28} />
-                </div>
-                <h3 className="text-xl font-black text-slate-800 mb-3">Premium Nutrients</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  สารละลาย AB สูตรพิเศษที่ผ่านการวิจัยมาเพื่อพืชแต่ละชนิดโดยเฉพาะ
-                </p>
-              </div>
-              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 bg-purple-50 text-purple-500 rounded-2xl flex items-center justify-center mb-6">
-                  <ShieldCheck size={28} />
-                </div>
-                <h3 className="text-xl font-black text-slate-800 mb-3">Quality Assurance</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  อุปกรณ์ทุกชิ้นผ่านการทดสอบและรับรองคุณภาพ พร้อมการรับประกันสินค้า
-                </p>
-              </div>
-              <div className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
-                <div className="w-14 h-14 bg-orange-50 text-orange-500 rounded-2xl flex items-center justify-center mb-6">
-                  <HeadphonesIcon size={28} />
-                </div>
-                <h3 className="text-xl font-black text-slate-800 mb-3">24/7 Support</h3>
-                <p className="text-slate-500 text-sm leading-relaxed">
-                  ทีมผู้เชี่ยวชาญพร้อมให้คำปรึกษาและแก้ไขปัญหาให้คุณได้ตลอดเวลา
-                </p>
-              </div>
-            </div>
-          </div>
-        </section>
 
-        {/* --- Featured Products Section --- */}
-        <section className="py-24 bg-white rounded-[4rem] shadow-[0_-20px_50px_rgba(0,0,0,0.02)] relative z-10">
-          <div className="max-w-7xl mx-auto px-6">
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
-              <div>
-                <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">
-                  Featured Products
-                </h2>
-                <p className="text-slate-500 font-bold mt-2">สินค้าคุณภาพที่เกษตรกรไว้วางใจ</p>
-                <div className="w-20 h-2 bg-[#22C55E] mt-4 rounded-full"></div>
-              </div>
-              <Link href="/products" className="text-slate-500 font-bold hover:text-[#22C55E] flex items-center gap-1 transition-colors uppercase text-xs tracking-[0.2em]">
-                View All <ArrowRight size={14} />
+            {/* View All Link */}
+            <div className="mt-6 text-center">
+              <Link
+                href="/products"
+                className="inline-flex items-center gap-2 text-sm font-bold text-[#22C55E] transition-colors duration-200 hover:text-[#16A34A]"
+              >
+                ดูสินค้าทั้งหมด
+                <ArrowRight size={16} />
               </Link>
             </div>
 
-            {isLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {[...Array(4)].map((_, i) => (
-                  <div key={i} className="bg-white rounded-[2.5rem] p-4 border border-slate-100 animate-pulse h-96">
-                    <div className="w-full aspect-square bg-slate-50 rounded-[2rem] mb-6"></div>
-                    <div className="space-y-3">
-                      <div className="h-4 bg-slate-100 rounded-full w-1/3"></div>
-                      <div className="h-6 bg-slate-100 rounded-full w-3/4"></div>
-                      <div className="h-4 bg-slate-100 rounded-full w-full"></div>
-                    </div>
+            {/* Product Grid */}
+            <div className="mt-12">
+              {isLoading ? (
+                <FeaturedProductsSkeleton />
+              ) : error ? (
+                <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-50 text-red-500">
+                    <AlertCircle size={28} />
                   </div>
-                ))}
-              </div>
-            ) : error ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-4 border border-slate-100 rounded-[3rem] bg-slate-50">
-                <AlertCircle size={32} className="text-red-400" />
-                <p className="font-medium text-slate-500">{error}</p>
-              </div>
-            ) : featuredProducts.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-16 gap-4 border border-slate-100 rounded-[3rem] bg-slate-50">
-                <Package size={32} className="text-slate-300" />
-                <p className="font-medium text-slate-500">ยังไม่มีสินค้าแนะนำ</p>
-              </div>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-                {featuredProducts.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-            )}
+                  <div>
+                    <p className="text-xl font-extrabold text-slate-900">โหลดข้อมูลสินค้าไม่สำเร็จ</p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-500">{error}</p>
+                  </div>
+                </div>
+              ) : featuredProducts.length === 0 ? (
+                <div className="flex min-h-[260px] flex-col items-center justify-center gap-4 rounded-2xl border border-slate-100 bg-white px-6 py-12 text-center">
+                  <div className="flex h-16 w-16 items-center justify-center rounded-full bg-emerald-50 text-emerald-600">
+                    <Package size={28} />
+                  </div>
+                  <div>
+                    <p className="text-xl font-extrabold text-slate-900">ยังไม่มีสินค้าแนะนำ</p>
+                    <p className="mt-2 text-sm leading-relaxed text-slate-500">
+                      เมื่อมีสินค้าเผยแพร่บนระบบแล้ว หน้านี้จะแสดงรายการเด่นให้อัตโนมัติ
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
+                  {featuredProducts.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         </section>
 
-        {/* --- Testimonials / Social Proof Section --- */}
-        {settings?.testimonials && settings.testimonials.filter((t: any) => t.isActive).length > 0 && (
-          <section className="py-24 bg-[#F8FAFC]">
-            <div className="max-w-7xl mx-auto px-6">
-              <div className="text-center mb-16">
-                <h2 className="text-3xl md:text-4xl font-black text-slate-800 tracking-tight">เสียงจากผู้ใช้งานจริง</h2>
-                <p className="text-slate-500 mt-4 font-medium">ความประทับใจจากลูกค้าที่เปลี่ยนฟาร์มให้สมาร์ทยิ่งขึ้น</p>
-                <div className="w-20 h-2 bg-[#22C55E] mt-6 rounded-full mx-auto"></div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-                {settings.testimonials.filter((t: any) => t.isActive).map((review: any, index: number) => (
-                  <div key={review.id || index} className="bg-white p-8 rounded-[2rem] shadow-sm border border-slate-100 flex flex-col justify-between hover:shadow-lg transition-transform duration-300">
-                    <div>
-                      <div className="flex gap-1 mb-4 text-orange-400">
-                        {[...Array(5)].map((_, i) => <Star key={i} size={18} fill="currentColor" className="text-amber-400" />)}
-                      </div>
-                      <p className="text-slate-600 font-medium italic leading-relaxed mb-6">
-                        &quot;{review.content}&quot;
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
-                      {review.avatarUrl ? (
-                        <img src={review.avatarUrl} alt={review.authorName} className="w-12 h-12 rounded-full object-cover border-2 border-slate-100" />
-                      ) : (
-                        <div className="w-12 h-12 rounded-full border-2 border-slate-100 bg-slate-100 flex items-center justify-center text-slate-400">
-                          <User size={20} />
-                        </div>
-                      )}
-                      <div>
-                        <h4 className="font-bold text-slate-800">{review.authorName}</h4>
-                        <p className="text-xs text-slate-500">{review.authorRole}</p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
+        <SocialProofSection testimonials={settings?.testimonials || []} />
+        <CtaSection metrics={metrics} />
       </main>
 
       <Footer />
