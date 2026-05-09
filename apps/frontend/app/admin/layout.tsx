@@ -7,7 +7,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import Navbar from '../components/Navbar'; 
 import { 
   LayoutDashboard, Box, Users, ShoppingCart, 
-  Tag, LogOut, Settings, MessageSquare 
+  Tag, LogOut, Settings, MessageSquare, BookOpen 
 } from 'lucide-react';
 import { STORAGE_KEYS } from '../../lib/storageKeys';
 import { useAuthStore } from '../../store/useAuthStore';
@@ -32,6 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     { icon: <ShoppingCart size={20} />, label: 'คำสั่งซื้อ', href: '/admin/orders' },
     { icon: <Tag size={20} />, label: 'Coupons / Discounts', href: '/admin/coupons' },
     { icon: <MessageSquare size={20} />, label: 'จัดการรีวิว', href: '/admin/reviews' },
+    { icon: <BookOpen size={20} />, label: 'จัดการบทความ', href: '/admin/blog' },
     { icon: <Settings size={20} />, label: 'ตั้งค่าระบบ', href: '/admin/settings' },
   ];
 

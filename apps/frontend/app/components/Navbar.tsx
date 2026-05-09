@@ -71,6 +71,7 @@ export default function Navbar({ user }: { user?: NavbarUser | null }) {
   const navLinks = [
     { name: 'หน้าแรก', href: '/' },
     { name: 'สินค้าทั้งหมด', href: '/products' },
+    { name: 'บทความ', href: '/blog' },
     { name: 'เกี่ยวกับเรา', href: '/about' },
     { name: 'ติดต่อเรา', href: '/contact' },
   ];

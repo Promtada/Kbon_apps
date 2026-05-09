@@ -12,6 +12,7 @@ import { CouponsModule } from './modules/coupons/coupons.module';
 import { AddressesModule } from './modules/addresses/addresses.module';
 import { ReviewsModule } from './modules/reviews/reviews.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { BlogsModule } from './modules/blogs/blogs.module';
 
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -30,6 +31,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AddressesModule,
     ReviewsModule,
     DashboardModule,
+    BlogsModule,
   ],
   controllers: [],
   providers: [],
